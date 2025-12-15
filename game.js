@@ -12,6 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
     streakBonus: { name: "Lucky Streak",  desc: "Stronger streak bonus",       base: 150, mult: 1.85, max: 100 },
     offlineBoost:{ name: "Offline Boost", desc: "+20% offline earnings",       base: 200, mult: 1.90, max: 100 }
   };
+  
+const DEV_MODE = true; // 🔧 set to false for production
 
   // ---------- Buildings definitions ----------
   // Each building produces coins/sec (baseCps) and costs scale by costMult per owned.
@@ -22,6 +24,75 @@ document.addEventListener("DOMContentLoaded", () => {
     tower:   { name: "Office Tower", desc: "Big city business",        baseCost: 20000,costMult: 1.24, baseCps: 200 },
     district:{ name: "Mega District",desc: "Massive passive income",   baseCost: 120000,costMult: 1.26, baseCps: 1200 }
   };
+  
+// ---------- DEV / TEST HELPERS ----------
+function devGiveCoins(amount = 1000) {
+  state.coins += amount;
+  state.totalEarned += amount;
+  updateHUD();
+  save();
+}
+
+function devMaxUpgrades() {
+  for (const k of Object.keys(UPG)) {
+    state.upgrades[k] = UPG[k].max;
+  }
+  updateHUD();
+  renderAll();
+  save();
+}
+
+function devBuyAllBuildings(count = 10) {
+  for (const k of Object.keys(BLD)) {
+    state.buildings[k] += count;
+  }
+  updateHUD();
+  renderAll();
+  save();
+}
+
+function devGivePrestige(points = 10) {
+  state.prestigePoints += points;
+  save();
+  renderAll();
+}
+
+function devResetRunOnly() {
+  state.coins = 0;
+  state.streak = 0;
+  state.lastClickAt = 0;
+  for (const k of Object.keys(state.upgrades)) state.upgrades[k] = 0;
+  for (const k of Object.keys(state.buildings)) state.buildings[k] = 0;
+  save();
+  renderAll();
+}
+
+function devSelfTest() {
+  console.group("Flip City Dev Test");
+
+  try {
+    devGiveCoins(1000);
+    console.log("✔ Coins add");
+
+    devMaxUpgrades();
+    console.log("✔ Upgrades max");
+
+    devBuyAllBuildings(5);
+    console.log("✔ Buildings buy");
+
+    devGivePrestige(5);
+    console.log("✔ Prestige add");
+
+    checkAchievements();
+    console.log("✔ Achievements check");
+
+    console.log("🎉 ALL TESTS PASSED");
+  } catch (e) {
+    console.error("❌ TEST FAILED", e);
+  }
+
+  console.groupEnd();
+}
 
   // ---------- Achievements ----------
   // Rewards: add a permanent bonus to prestige multiplier or give coins
