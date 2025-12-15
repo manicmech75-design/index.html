@@ -763,6 +763,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
       checkAchievements();
       console.log("✔ Achievements check");
+      
+<div id="tileModal" style="
+  position:fixed; inset:0; display:none;
+  align-items:center; justify-content:center;
+  background: rgba(0,0,0,0.55);
+  padding:16px; z-index:9999;">
+  <div style="
+    width:min(520px, 100%);
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(18,28,47,.96);
+    box-shadow: 0 18px 60px rgba(0,0,0,.55);
+    padding:14px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+      <div style="font-weight:900; font-size:18px;">
+        <span id="modalIcon">🏙️</span> <span id="modalTitle">Building</span>
+      </div>
+      <button id="modalClose" style="background: rgba(255,255,255,.12); color:#fff; box-shadow:none;">✖</button>
+    </div>
+
+    <div style="opacity:.85; margin-top:8px;" id="modalDesc"></div>
+
+    <div style="margin-top:10px; display:grid; gap:6px; opacity:.9;">
+      <div>Owned: <b id="modalOwned">0</b></div>
+      <div>Income each: <b id="modalEach">0</b>/sec</div>
+      <div>Total income: <b id="modalTotal">0</b>/sec</div>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+      <button id="modalCollect">Collect Rent</button>
+      <button id="modalBuy" style="background: rgba(255,255,255,.12); color:#fff; box-shadow:none;">Buy 1</button>
+    </div>
+
+    <div style="opacity:.65; font-size:12px; margin-top:10px;">
+      Tip: Collect Rent gives a small bonus so tapping the city stays fun.
+    </div>
+  </div>
+</div>
 
       console.log("🎉 ALL TESTS PASSED");
       toast("DEV TEST: ALL PASSED ✅");
