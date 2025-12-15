@@ -6,167 +6,94 @@
   <title>Flip City</title>
 
   <!-- PWA -->
-  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="manifest" href="./manifest.webmanifest">
   <meta name="theme-color" content="#0b1220">
- <link rel="icon" href="./icons/icon-192.png">
+
+  <!-- Icons (use ./ for GitHub Pages correctness) -->
+  <link rel="icon" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="./icons/icon-192.png">
 
   <style>
     * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    body{
+      margin:0; min-height:100vh;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
       background: radial-gradient(circle at top, #1a2a44, #0b1220);
-      color: #fff;
+      color:#fff;
     }
-
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background: rgba(11, 18, 32, 0.75);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(255,255,255,0.08);
+    header{
+      position:sticky; top:0; z-index:10;
+      background:rgba(11,18,32,.75);
+      backdrop-filter:blur(10px);
+      border-bottom:1px solid rgba(255,255,255,.08);
     }
-
-    nav {
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 12px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
+    nav{
+      max-width:980px; margin:0 auto; padding:12px 16px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
     }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 800;
-      letter-spacing: 0.3px;
+    .brand{ display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.3px; }
+    .pill{
+      font-size:12px; padding:4px 10px;
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:999px; color:rgba(255,255,255,.85);
     }
-
-    .pill {
-      font-size: 12px;
-      padding: 4px 10px;
-      border: 1px solid rgba(255,255,255,0.16);
-      border-radius: 999px;
-      color: rgba(255,255,255,0.85);
+    .wrap{ max-width:980px; margin:0 auto; padding:18px 16px 28px; display:grid; gap:16px; }
+    .grid{ display:grid; grid-template-columns:1fr; gap:16px; }
+    @media (min-width:860px){ .grid{ grid-template-columns:2fr 1fr; } }
+    .card{
+      background:rgba(18,28,47,.88);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:14px;
+      box-shadow:0 14px 40px rgba(0,0,0,.38);
+      overflow:hidden;
     }
-
-    .wrap {
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 18px 16px 28px;
-      display: grid;
-      gap: 16px;
+    .card-header{
+      padding:14px 16px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      display:flex; align-items:baseline; justify-content:space-between; gap:10px;
     }
+    .card-header h1,.card-header h2{ margin:0; font-size:16px; letter-spacing:.2px; }
+    .muted{ color:rgba(255,255,255,.7); font-size:13px; }
+    .card-body{ padding:16px; }
 
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 16px;
+    /* game container */
+    #game{ min-height:220px; }
+
+    /* global button look (game.js also injects buttons) */
+    #game button, .btn {
+      margin-top:12px;
+      padding:12px 18px;
+      font-size:16px;
+      border:none;
+      border-radius:10px;
+      cursor:pointer;
+      background:#2ea8ff;
+      color:#07111f;
+      font-weight:800;
+      box-shadow:0 10px 22px rgba(46,168,255,.25);
+      transition: transform .08s ease, filter .15s ease;
     }
+    #game button:hover, .btn:hover{ filter:brightness(1.05); }
+    #game button:active, .btn:active{ transform:scale(.98); }
 
-    @media (min-width: 860px) {
-      .grid { grid-template-columns: 2fr 1fr; }
+    .ad-slot{
+      height:250px;
+      border-radius:12px;
+      border:1px dashed rgba(255,255,255,.18);
+      display:grid; place-items:center;
+      color:rgba(255,255,255,.65);
+      background:rgba(0,0,0,.12);
     }
-
-    .card {
-      background: rgba(18, 28, 47, 0.88);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 14px;
-      box-shadow: 0 14px 40px rgba(0,0,0,0.38);
-      overflow: hidden;
+    .footer{
+      text-align:center;
+      color:rgba(255,255,255,.55);
+      font-size:12px;
+      padding:8px 0 20px;
     }
-
-    .card-header {
-      padding: 14px 16px;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .card-header h1,
-    .card-header h2 {
-      margin: 0;
-      font-size: 16px;
-      letter-spacing: 0.2px;
-    }
-
-    .muted {
-      color: rgba(255,255,255,0.7);
-      font-size: 13px;
-    }
-
-    .card-body { padding: 16px; }
-
-    /* Game container where game.js injects UI */
-    #game {
-      min-height: 220px;
-      display: grid;
-      place-items: center;
-      text-align: center;
-    }
-
-    /* Default injected buttons (Earn + Upgrades) */
-    #game button {
-      margin-top: 12px;
-      padding: 12px 18px;
-      font-size: 16px;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      background: #2ea8ff;
-      color: #07111f;
-      font-weight: 700;
-      box-shadow: 0 10px 22px rgba(46,168,255,0.25);
-      transition: transform 0.08s ease, filter 0.15s ease;
-      min-width: 280px;
-      max-width: 420px;
-      width: 100%;
-    }
-
-    #game button:hover { filter: brightness(1.05); }
-    #game button:active { transform: scale(0.98); }
-
-    /* Make the Upgrade section look cleaner */
-    #game h3 {
-      margin: 18px 0 8px;
-    }
-
-    /* Optional: nicer divider */
-    #game hr {
-      width: 100%;
-      max-width: 520px;
-      border: none;
-      border-top: 1px solid rgba(255,255,255,0.12);
-      margin: 16px auto;
-    }
-
-    .ad-slot {
-      height: 250px;
-      border-radius: 12px;
-      border: 1px dashed rgba(255,255,255,0.18);
-      display: grid;
-      place-items: center;
-      color: rgba(255,255,255,0.65);
-      background: rgba(0,0,0,0.12);
-    }
-
-    .footer {
-      text-align: center;
-      color: rgba(255,255,255,0.55);
-      font-size: 12px;
-      padding: 8px 0 20px;
-    }
+    code{ background:rgba(255,255,255,.08); padding:2px 6px; border-radius:8px; }
   </style>
 </head>
 
@@ -183,19 +110,16 @@
 
   <main class="wrap">
     <section class="grid">
-      <!-- GAME CARD -->
       <div class="card">
         <div class="card-header">
           <h1>Game</h1>
           <span class="muted" id="status">Loading…</span>
         </div>
         <div class="card-body">
-          <!-- game.js injects the UI here -->
           <div id="game">Loading game…</div>
         </div>
       </div>
 
-      <!-- INFO CARD -->
       <aside class="card">
         <div class="card-header">
           <h2>Info</h2>
@@ -203,10 +127,8 @@
         </div>
         <div class="card-body">
           <p class="muted" style="margin-top:0;">
-            If the game doesn’t show, it’s usually because <b>game.js</b> isn’t in the same folder as <b>index.html</b>
-            or the script tag path is wrong.
+            Tip: if updates don’t appear, it’s usually PWA caching. Clear site data or bump the cache version in <code>sw.js</code>.
           </p>
-
           <div class="ad-slot">Ad slot (optional)</div>
         </div>
       </aside>
@@ -215,20 +137,20 @@
     <div class="footer">© <span id="year"></span> Flip City</div>
   </main>
 
-  <!-- Load game.js LAST so #game definitely exists -->
   <script src="./game.js"></script>
 
-  <!-- Helpers -->
   <script>
     document.getElementById("year").textContent = new Date().getFullYear();
-
     const status = document.getElementById("status");
     const gameEl = document.getElementById("game");
-
     setTimeout(() => {
-      if (gameEl && gameEl.querySelector("button, h1, h2, p")) status.textContent = "Ready";
-      else status.textContent = "Waiting for game.js";
+      status.textContent = (gameEl && gameEl.querySelector("button, h1, h2, p, div")) ? "Ready" : "Waiting for game.js";
     }, 300);
+
+    // Register SW (safe)
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    }
   </script>
 </body>
 </html>
