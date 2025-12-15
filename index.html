@@ -4,25 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<style>
-  #ad-banner {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    z-index: 999;
-    background: #0b1220;
-  }
-</style>
-
   <!-- PWA -->
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#0b1220">
-  <link rel="icon" href="icons/icon-192.png">
-
-  <!-- iOS PWA Support -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="City Flip">
+  <link rel="icon" href="/icons/icon-192.png">
 
   <!-- Google AdSense -->
   <script async
@@ -30,62 +15,21 @@
     crossorigin="anonymous">
   </script>
 
-  <title>City Flip</title>
-
+  <!-- Ad + layout CSS -->
   <style>
-    * { box-sizing: border-box; }
-
     body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: radial-gradient(circle at top, #1a2a44, #0b1220);
-      color: #fff;
+      padding-bottom: 70px;
     }
 
-    nav {
-      padding: 12px;
-      text-align: center;
-      background: rgba(0,0,0,0.2);
-    }
-
-    nav a {
-      color: #fff;
-      text-decoration: none;
-      margin: 0 10px;
-      font-weight: 600;
-    }
-
-    main {
-      text-align: center;
-      padding: 40px 20px;
+    #ad-banner {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      z-index: 999;
+      background: #0b1220;
     }
   </style>
+
+  <title>City Flip</title>
 </head>
-
-<!-- Banner Ad -->
-<div id="ad-banner">
-  <ins class="adsbygoogle"
-       style="display:block"
-       data-ad-client="ca-pub-XXXXXXXXXXXX"
-       data-ad-slot="BANNER_SLOT_ID"
-       data-ad-format="auto"
-       data-full-width-responsive="true"></ins>
-</div>
-
-<script>
-  (adsbygoogle = window.adsbygoogle || []).push({});
-</script>
-
 <body>
-  <nav>
-    <a href="about.html">About</a> |
-    <a href="privacy-policy.html">Privacy Policy</a>
-  </nav>
-
-  <main>
-    <h1>City Flip</h1>
-    <p>Tap, time, and chain your moves to build your best run.</p>
-  </main>
-</body>
-</html>
