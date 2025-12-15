@@ -1,141 +1,147 @@
-// game.js
+// Flip City - complete playable clicker with upgrades + offline earnings + saving
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("Game loaded");
+  const SAVE_KEY = "flipcity_save_v3"; // bump if you ever change save format
 
-  const SAVE_KEY = "flipcity_save_v1";
-
-  let coins = 0;
-
-  const upgrades = {
-    clickPower: { level: 0, baseCost: 10, costMult: 1.6, addPerLevel: 1 },
-    autoEarn:   { level: 0, baseCost: 25, costMult: 1.7, cpsPerLevel: 0.2 },
-    critChance: { level: 0, baseCost: 50, costMult: 1.8, addPerLevel: 0.02 }
+  // ---------- State ----------
+  let state = {
+    coins: 0,
+    totalEarned: 0,
+    lastSave: Date.now(),
+    streak: 0,
+    lastClickAt: 0,
+    upgrades: {
+      clickPower: 0,     // + click power
+      autoEarn: 0,       // coins/sec
+      critChance: 0,     // chance per click
+      critPower: 0,      // crit multiplier
+      coinMult: 0,       // global multiplier
+      streakBonus: 0,    // streak strength
+      offlineBoost: 0    // offline earnings multiplier
+    }
   };
 
-  function saveGame() {
-    const data = {
-      coins,
-      upgrades: {
-        clickPower: upgrades.clickPower.level,
-        autoEarn: upgrades.autoEarn.level,
-        critChance: upgrades.critChance.level
-      }
-    };
-    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  // ---------- Upgrade definitions ----------
+  const UPG = {
+    clickPower:  { name: "Click Power", desc: "+1 coin per click", base: 10, mult: 1.55, max: 200 },
+    autoEarn:    { name: "Auto Earn", desc: "+0.25 coins/sec", base: 25, mult: 1.60, max: 200 },
+    critChance:  { name: "Crit Chance", desc: "+2% crit chance", base: 50, mult: 1.70, max: 50 },
+    critPower:   { name: "Crit Power", desc: "+0.5 crit multiplier", base: 75, mult: 1.75, max: 50 },
+    coinMult:    { name: "Coin Mult", desc: "+10% all earnings", base: 100, mult: 1.80, max: 100 },
+    streakBonus: { name: "Lucky Streak", desc: "Stronger streak bonus", base: 150, mult: 1.85, max: 100 },
+    offlineBoost:{ name: "Offline Boost", desc: "+20% offline earnings", base: 200, mult: 1.90, max: 100 },
+  };
+
+  function cost(key) {
+    const lvl = state.upgrades[key] ?? 0;
+    return Math.ceil(UPG[key].base * Math.pow(UPG[key].mult, lvl));
   }
 
-  function loadGame() {
+  // ---------- Helpers ----------
+  const fmt = (n) => {
+    n = Number(n) || 0;
+    if (n < 1000) return Math.floor(n).toString();
+    const units = ["K","M","B","T","Qa","Qi"];
+    let u = -1;
+    while (n >= 1000 && u < units.length - 1) { n /= 1000; u++; }
+    return (n < 10 ? n.toFixed(2) : n < 100 ? n.toFixed(1) : n.toFixed(0)) + units[u];
+  };
+
+  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+  // ---------- Persistence ----------
+  function save() {
+    state.lastSave = Date.now();
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  }
+
+  function load() {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
-      if (!raw) return;
-
       const data = JSON.parse(raw);
-      if (typeof data.coins === "number") coins = data.coins;
+      if (!data || typeof data !== "object") return;
 
-      if (data.upgrades) {
-        if (typeof data.upgrades.clickPower === "number") upgrades.clickPower.level = data.upgrades.clickPower;
-        if (typeof data.upgrades.autoEarn === "number") upgrades.autoEarn.level = data.upgrades.autoEarn;
-        if (typeof data.upgrades.critChance === "number") upgrades.critChance.level = data.upgrades.critChance;
+      // merge safely
+      state.coins = typeof data.coins === "number" ? data.coins : 0;
+      state.totalEarned = typeof data.totalEarned === "number" ? data.totalEarned : 0;
+      state.lastSave = typeof data.lastSave === "number" ? data.lastSave : Date.now();
+      state.streak = typeof data.streak === "number" ? data.streak : 0;
+      state.lastClickAt = typeof data.lastClickAt === "number" ? data.lastClickAt : 0;
+
+      if (data.upgrades && typeof data.upgrades === "object") {
+        for (const k of Object.keys(state.upgrades)) {
+          const v = data.upgrades[k];
+          state.upgrades[k] = typeof v === "number" ? v : 0;
+        }
       }
-    } catch (e) {
-      console.warn("Save data invalid, starting fresh.");
+    } catch {
+      // ignore bad saves
     }
   }
 
-  function upgradeCost(key) {
-    const u = upgrades[key];
-    return Math.ceil(u.baseCost * Math.pow(u.costMult, u.level));
-  }
+  // Offline earnings (based on auto earn + mult)
+  function applyOfflineEarnings() {
+    const now = Date.now();
+    const secondsAway = Math.max(0, Math.floor((now - (state.lastSave || now)) / 1000));
+    if (secondsAway <= 2) return { secondsAway: 0, gained: 0 };
 
-  function updateUI() {
-    const coinsEl = document.getElementById("coins");
-    if (coinsEl) coinsEl.textContent = "Coins: " + Math.floor(coins);
+    const cps = getCoinsPerSecond();
+    const base = cps * secondsAway;
 
-    const b1 = document.getElementById("buyClickPower");
-    const b2 = document.getElementById("buyAutoEarn");
-    const b3 = document.getElementById("buyCrit");
+    // Offline boost: +20% per level
+    const offMult = 1 + 0.20 * (state.upgrades.offlineBoost || 0);
+    const gained = base * offMult;
 
-    if (b1) b1.textContent = `Buy Click Power (Lv ${upgrades.clickPower.level}) - ${upgradeCost("clickPower")} coins`;
-    if (b2) b2.textContent = `Buy Auto Earn (Lv ${upgrades.autoEarn.level}) - ${upgradeCost("autoEarn")} coins`;
-    if (b3) b3.textContent = `Buy Crit Chance (Lv ${upgrades.critChance.level}) - ${upgradeCost("critChance")} coins`;
-  }
-
-  function buyUpgrade(key) {
-    const cost = upgradeCost(key);
-    if (coins < cost) return;
-    coins -= cost;
-    upgrades[key].level += 1;
-    updateUI();
-    saveGame();
-  }
-
-  function earnClick() {
-    const clickPower = 1 + upgrades.clickPower.level * upgrades.clickPower.addPerLevel;
-    const critChance = upgrades.critChance.level * upgrades.critChance.addPerLevel;
-
-    const isCrit = Math.random() < critChance;
-    const gained = isCrit ? clickPower * 3 : clickPower;
-
-    coins += gained;
-    updateUI();
-    saveGame();
-  }
-
-  const game = document.getElementById("game");
-  if (!game) {
-    console.error("Game container not found (#game)");
-    return;
-  }
-
-  game.innerHTML = `
-    <h2>🏙️ Flip City</h2>
-    <p>Tap to earn coins</p>
-
-    <button id="earn">Earn 💰</button>
-    <p id="coins">Coins: 0</p>
-
-    <hr>
-
-    <h3>Upgrades</h3>
-    <div style="display:grid; gap:10px; width:min(420px, 100%); margin: 0 auto;">
-      <button id="buyClickPower"></button>
-      <button id="buyAutoEarn"></button>
-      <button id="buyCrit"></button>
-    </div>
-
-    <div style="margin-top:14px; opacity:.75; font-size:12px;">
-      <button id="resetSave" style="background: rgba(255,255,255,0.12); color:#fff; box-shadow:none;">Reset Save</button>
-    </div>
-  `;
-
-  document.getElementById("earn").onclick = earnClick;
-  document.getElementById("buyClickPower").onclick = () => buyUpgrade("clickPower");
-  document.getElementById("buyAutoEarn").onclick   = () => buyUpgrade("autoEarn");
-  document.getElementById("buyCrit").onclick       = () => buyUpgrade("critChance");
-
-  document.getElementById("resetSave").onclick = () => {
-    localStorage.removeItem(SAVE_KEY);
-    coins = 0;
-    upgrades.clickPower.level = 0;
-    upgrades.autoEarn.level = 0;
-    upgrades.critChance.level = 0;
-    updateUI();
-  };
-
-  // Load saved data BEFORE starting loops/UI updates
-  loadGame();
-  updateUI();
-
-  // Auto earn loop
-  setInterval(() => {
-    const cps = upgrades.autoEarn.level * upgrades.autoEarn.cpsPerLevel;
-    if (cps > 0) {
-      coins += cps;
-      updateUI();
-      saveGame();
+    if (gained > 0) {
+      state.coins += gained;
+      state.totalEarned += gained;
     }
-  }, 1000);
+    return { secondsAway, gained };
+  }
 
-  // Backup save (in case they idle)
-  setInterval(saveGame, 5000);
-});
+  // ---------- Earnings formulas ----------
+  function getGlobalMult() {
+    // +10% per level
+    return 1 + 0.10 * (state.upgrades.coinMult || 0);
+  }
+
+  function getClickPower() {
+    // base click = 1 + clickPower levels
+    const base = 1 + (state.upgrades.clickPower || 0) * 1;
+    return base;
+  }
+
+  function getCritChance() {
+    // 0% base, +2% per level, cap 60%
+    const chance = (state.upgrades.critChance || 0) * 0.02;
+    return clamp(chance, 0, 0.60);
+  }
+
+  function getCritMult() {
+    // base crit = 2x, +0.5 per level, cap 10x
+    const mult = 2 + (state.upgrades.critPower || 0) * 0.5;
+    return clamp(mult, 2, 10);
+  }
+
+  function getStreakMult() {
+    // streak builds if clicks < 2s apart
+    // base streak effect: +1% per streak
+    // streakBonus increases effect by +0.5% per level
+    const per = 0.01 + (state.upgrades.streakBonus || 0) * 0.005;
+    // cap streak multiplier to prevent runaway
+    const m = 1 + clamp(state.streak, 0, 200) * per;
+    return clamp(m, 1, 4.0); // cap at 4x
+  }
+
+  function getCoinsPerSecond() {
+    // +0.25 cps per autoEarn level
+    const cps = (state.upgrades.autoEarn || 0) * 0.25;
+    return cps * getGlobalMult();
+  }
+
+  // ---------- UI ----------
+  const gameEl = document.getElementById("game");
+  if (!gameEl) return;
+
+  gameEl.innerHTML = `
+    <div style="width: min(680px, 100%); margin: 0 au
