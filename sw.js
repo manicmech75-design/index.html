@@ -1,16 +1,14 @@
-const CACHE = "cityflip-ultra-cache-v4";
-const OFFLINE_URL = "/offline.html";
+  const CACHE = "cityflip-ultra-cache-v5";
+const OFFLINE_URL = "./offline.html";
 
 const CORE = [
-  "/",
-  "/index.html",
-  "/manifest.json",
-  "/offline.html",
-  "/sw.js",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-  "/icons/maskable-512.png",
-  "/icons/apple-touch-icon-180.png"
+  "./",
+  "./index.html",
+  "./game.js",
+  "./manifest.webmanifest",
+  "./offline.html",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png"
 ];
 
 self.addEventListener("install", (event) => {
@@ -21,9 +19,9 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.map((k) => (k === CACHE ? null : caches.delete(k))))
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then((keys) => Promise.all(keys.map((k) => (k === CACHE ? null : caches.delete(k)))))
+      .then(() => self.clients.claim())
   );
 });
 
@@ -33,8 +31,14 @@ self.addEventListener("fetch", (event) => {
 
   if (url.origin !== location.origin) return;
 
-  // HTML/nav: network-first (keeps updates flowing)
-  if (req.mode === "navigate" || (req.headers.get("accept") || "").includes("text/html")) {
+  const isHTML =
+    req.mode === "navigate" ||
+    (req.headers.get("accept") || "").includes("text/html");
+
+  const isGameJS = url.pathname.endsWith("/game.js") || url.pathname.endsWith("game.js");
+
+  // Network-first for HTML pages (so updates flow)
+  if (isHTML) {
     event.respondWith(
       fetch(req)
         .then((resp) => {
@@ -42,15 +46,26 @@ self.addEventListener("fetch", (event) => {
           caches.open(CACHE).then((c) => c.put(req, copy));
           return resp;
         })
-        .catch(async () => {
-          const cached = await caches.match(req);
-          return cached || caches.match(OFFLINE_URL);
-        })
+        .catch(async () => (await caches.match(req)) || caches.match(OFFLINE_URL))
     );
     return;
   }
 
-  // Assets: cache-first
+  // Network-first for game.js specifically (prevents “stuck old script”)
+  if (isGameJS) {
+    event.respondWith(
+      fetch(req)
+        .then((resp) => {
+          const copy = resp.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy));
+          return resp;
+        })
+        .catch(async () => (await caches.match(req)) || Response.error())
+    );
+    return;
+  }
+
+  // Cache-first for other assets (images, css, etc.)
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;
@@ -60,7 +75,7 @@ self.addEventListener("fetch", (event) => {
           caches.open(CACHE).then((c) => c.put(req, copy));
           return resp;
         })
-        .catch(() => caches.match(OFFLINE_URL));
+        .catch(() => Response.error());
     })
   );
 });
