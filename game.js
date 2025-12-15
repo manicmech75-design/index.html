@@ -833,6 +833,62 @@ document.addEventListener("DOMContentLoaded", () => {
     try { importSave(raw); }
     catch { toast("Import failed (invalid JSON)."); }
   };
+let selectedBuildingKey = null;
+let lastRentCollectAt = 0;
+
+function openTileModal(key) {
+  selectedBuildingKey = key;
+
+  const def = BLD[key];
+  const owned = state.buildings[key] || 0;
+  const icon = BUILDING_ICONS[key] || "🏙️";
+
+  const each = def.baseCps * globalMult() * overclockMult();
+  const total = each * owned;
+
+  $("modalIcon").textContent = icon;
+  $("modalTitle").textContent = def.name;
+  $("modalDesc").textContent = def.desc;
+
+  $("modalOwned").textContent = owned;
+  $("modalEach").textContent = fmt(each);
+  $("modalTotal").textContent = fmt(total);
+
+  $("tileModal").style.display = "flex";
+}
+
+function closeTileModal() {
+  $("tileModal").style.display = "none";
+  selectedBuildingKey = null;
+}
+
+function collectRent() {
+  if (!selectedBuildingKey) return;
+
+  const now = Date.now();
+  // 2-second cooldown so it can't be spammed
+  if (now - lastRentCollectAt < 2000) return toast("⏳ Rent is still collecting...");
+
+  const key = selectedBuildingKey;
+  const owned = state.buildings[key] || 0;
+  if (owned <= 0) return toast("No buildings to collect from.");
+
+  // Bonus = 2 seconds worth of THIS building's income (feels good, not broken)
+  const each = BLD[key].baseCps * globalMult() * overclockMult();
+  const bonus = each * owned * 2;
+
+  lastRentCollectAt = now;
+  state.coins += bonus;
+  state.totalEarned += bonus;
+
+  toast(`🏦 Collected rent: +${fmt(bonus)}`);
+  updateHUD();
+  save();
+  checkAchievements();
+
+  // refresh modal numbers
+  openTileModal(key);
+}
 
   // Dev panel hooks
   if (DEV_MODE) {
