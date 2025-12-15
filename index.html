@@ -12,165 +12,112 @@
   <title>City Flip</title>
 
   <style>
-    :root {
-      --bg1: #1a2a44;
-      --bg2: #0b1220;
+    :root{
+      --bg1:#1a2a44; --bg2:#0b1220;
       --panel: rgba(255,255,255,0.08);
-      --panel2: rgba(255,255,255,0.12);
-      --text: #ffffff;
-      --muted: rgba(255,255,255,0.75);
-      --accent: #4ade80;
-      --danger: #fb7185;
-      --radius: 16px;
+      --border: rgba(255,255,255,0.12);
+      --text:#fff; --muted: rgba(255,255,255,0.72);
+      --accent:#4ade80; --danger:#fb7185;
+      --radius:16px;
     }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
+    *{box-sizing:border-box}
+    body{
+      margin:0; min-height:100vh;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      color: var(--text);
+      color:var(--text);
       background: radial-gradient(circle at top, var(--bg1), var(--bg2));
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 18px;
-      overscroll-behavior: none;
+      display:flex; justify-content:center; align-items:center;
+      padding:18px;
+      overscroll-behavior:none;
       -webkit-tap-highlight-color: transparent;
-      user-select: none;
+      user-select:none;
     }
-
-    .app {
-      width: min(440px, 100%);
-      display: grid;
-      gap: 14px;
-    }
-
-    /* Top bar */
-    .topbar {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-      align-items: center;
-      padding: 14px 14px;
-      background: var(--panel);
-      border: 1px solid rgba(255,255,255,0.10);
-      border-radius: var(--radius);
+    .app{width:min(440px,100%); display:grid; gap:14px;}
+    .topbar{
+      display:grid; grid-template-columns: 1fr auto auto;
+      gap:10px; align-items:center;
+      padding:14px;
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
       backdrop-filter: blur(8px);
     }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 700;
-      letter-spacing: 0.2px;
-    }
-
-    .brand .logo {
-      width: 34px;
-      height: 34px;
-      display: grid;
-      place-items: center;
-      border-radius: 12px;
+    .brand{display:flex; align-items:center; gap:10px; font-weight:800;}
+    .logo{
+      width:34px; height:34px; display:grid; place-items:center;
+      border-radius:12px;
       background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
-      border: 1px solid rgba(255,255,255,0.12);
-      font-size: 18px;
+      border:1px solid rgba(255,255,255,0.12);
+      font-size:18px;
     }
-
-    .scorebox {
-      text-align: right;
-      line-height: 1.1;
+    .stat{
+      text-align:right; line-height:1.1;
+      min-width: 64px;
     }
-    .scorebox .label {
-      font-size: 12px;
-      color: var(--muted);
-      letter-spacing: 0.6px;
-      text-transform: uppercase;
-    }
-    .scorebox .value {
-      font-size: 22px;
-      font-weight: 800;
-    }
-
-    /* Game frame */
-    .frame {
-      position: relative;
-      background: rgba(0,0,0,0.20);
-      border: 1px solid rgba(255,255,255,0.10);
+    .stat .label{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:0.6px;}
+    .stat .value{font-size:20px; font-weight:900;}
+    .frame{
+      position:relative;
+      background: rgba(0,0,0,0.18);
+      border:1px solid rgba(255,255,255,0.10);
       border-radius: calc(var(--radius) + 6px);
-      overflow: hidden;
-      aspect-ratio: 9 / 16;
+      overflow:hidden;
+      aspect-ratio: 9/16;
       box-shadow: 0 24px 80px rgba(0,0,0,0.35);
+      touch-action: manipulation;
+    }
+    canvas{width:100%; height:100%; display:block;}
+
+    .toast{
+      position:absolute; top:14px; left:50%; transform:translateX(-50%);
+      padding:8px 12px;
+      border-radius:999px;
+      font-weight:800;
+      background: rgba(255,255,255,0.10);
+      border:1px solid rgba(255,255,255,0.14);
+      color:#fff;
+      opacity:0;
+      transition: opacity 160ms ease, transform 160ms ease;
+      pointer-events:none;
+      backdrop-filter: blur(8px);
+    }
+    .toast.show{
+      opacity:1;
+      transform: translateX(-50%) translateY(2px);
     }
 
-    canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    /* Overlay */
-    .overlay {
-      position: absolute;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      padding: 18px;
+    .overlay{
+      position:absolute; inset:0;
+      display:grid; place-items:center;
+      padding:18px;
       background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.10), rgba(0,0,0,0.45));
     }
-
-    .card {
-      width: min(360px, 92%);
-      padding: 16px;
-      border-radius: 18px;
+    .card{
+      width:min(360px,92%);
+      padding:16px;
+      border-radius:18px;
       background: rgba(10, 18, 32, 0.72);
-      border: 1px solid rgba(255,255,255,0.12);
+      border:1px solid rgba(255,255,255,0.12);
       backdrop-filter: blur(10px);
-      text-align: center;
+      text-align:center;
     }
-
-    .card h1 {
-      margin: 0 0 6px;
-      font-size: 22px;
-      letter-spacing: 0.3px;
-    }
-
-    .card p {
-      margin: 0 0 14px;
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.35;
-    }
-
-    .btn {
-      width: 100%;
-      border: 0;
-      cursor: pointer;
-      padding: 12px 14px;
-      border-radius: 14px;
-      font-weight: 800;
-      font-size: 16px;
-      color: #062312;
+    .card h1{margin:0 0 6px; font-size:22px;}
+    .card p{margin:0 0 14px; color:var(--muted); font-size:14px; line-height:1.35;}
+    .btnrow{display:grid; gap:10px;}
+    .btn{
+      width:100%;
+      border:0; cursor:pointer;
+      padding:12px 14px;
+      border-radius:14px;
+      font-weight:900; font-size:16px;
+      color:#062312;
       background: linear-gradient(180deg, #86efac, #22c55e);
     }
-
-    .hintrow {
-      margin-top: 10px;
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      color: var(--muted);
-      font-size: 12px;
+    .btn.secondary{
+      color:#0b1220;
+      background: linear-gradient(180deg, #e5e7eb, #cbd5e1);
     }
-
-    /* Bottom footer */
-    .footer {
-      text-align: center;
-      font-size: 12px;
-      color: rgba(255,255,255,0.65);
-    }
+    .footer{ text-align:center; font-size:12px; color: rgba(255,255,255,0.65); }
   </style>
 </head>
 
@@ -181,64 +128,110 @@
         <div class="logo">🏙️</div>
         <div>
           <div style="font-size:18px;">City Flip</div>
-          <div style="font-size:12px;color:rgba(255,255,255,0.70);margin-top:2px;">Tap to flip & stack</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.70);margin-top:2px;">Tap to stack blocks</div>
         </div>
       </div>
 
-      <div class="scorebox">
+      <div class="stat">
         <div class="label">Score</div>
         <div class="value" id="score">0</div>
+      </div>
+
+      <div class="stat">
+        <div class="label">Best</div>
+        <div class="value" id="best">0</div>
       </div>
     </div>
 
     <div class="frame" id="frame">
-      <canvas id="game" width="360" height="640"></canvas>
+      <canvas id="game"></canvas>
+      <div class="toast" id="toast">Perfect!</div>
 
       <div class="overlay" id="overlay">
         <div class="card">
-          <h1>Ready to build?</h1>
-          <p>
-            Tap to start. This is the correct “game look” layout:
-            big play area, score, and no blank screen.
-          </p>
-          <button class="btn" id="startBtn">Start</button>
-          <div class="hintrow">
-            <span>📱 Mobile-first</span>
-            <span>⚡ Fast load</span>
-            <span>🧠 Simple UI</span>
+          <h1>Build the skyline</h1>
+          <p>Tap to place each block. If you miss the stack, it’s game over. Hit perfect placements for bonus.</p>
+          <div class="btnrow">
+            <button class="btn" id="startBtn">Start</button>
+            <button class="btn secondary" id="howBtn">How to play</button>
           </div>
+          <p id="howText" style="display:none;margin-top:12px;">
+            • The top block moves left/right.<br>
+            • Tap to lock it in place.<br>
+            • Overhang gets cut off.<br>
+            • No overlap = game over.
+          </p>
         </div>
       </div>
     </div>
 
-    <div class="footer">City Flip • v1</div>
+    <div class="footer">City Flip • v1 (stack + sound)</div>
   </div>
 
   <script>
-    // --- Simple demo rendering so the page NEVER looks blank ---
+    // ---------- DOM ----------
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
     const overlay = document.getElementById("overlay");
     const startBtn = document.getElementById("startBtn");
+    const howBtn = document.getElementById("howBtn");
+    const howText = document.getElementById("howText");
+    const toast = document.getElementById("toast");
+
     const scoreEl = document.getElementById("score");
+    const bestEl = document.getElementById("best");
 
-    let running = false;
-    let score = 0;
+    // ---------- Best score ----------
+    const BEST_KEY = "cityflip_best_v1";
+    let best = Number(localStorage.getItem(BEST_KEY) || 0);
+    bestEl.textContent = best;
 
-    // skyline buildings
-    const buildings = Array.from({ length: 14 }).map((_, i) => ({
-      x: i * 30,
-      w: 22 + Math.random() * 14,
-      h: 120 + Math.random() * 260,
-      speed: 0.35 + Math.random() * 0.35
-    }));
+    // ---------- Sound + Haptics ----------
+    let audioCtx = null;
 
-    // “block” that moves so it feels like a game
-    let blockX = 40;
-    let dir = 1;
+    function initAudio() {
+      // browsers require user gesture to start audio
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    }
 
-    function resizeToDisplaySize() {
-      // Keep crisp on mobile
+    function beep({ freq = 440, dur = 0.06, type = "sine", vol = 0.06 } = {}) {
+      if (!audioCtx) return;
+      const t = audioCtx.currentTime;
+
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t);
+
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+      o.connect(g);
+      g.connect(audioCtx.destination);
+
+      o.start(t);
+      o.stop(t + dur + 0.02);
+    }
+
+    function haptic(pattern = [10]) {
+      // Android: usually works. iOS Safari: usually no.
+      if (navigator.vibrate) navigator.vibrate(pattern);
+    }
+
+    function sfx(name) {
+      if (name === "place")  beep({ freq: 520, dur: 0.045, type: "square",   vol: 0.04 });
+      if (name === "perfect") {
+        beep({ freq: 740, dur: 0.05, type: "triangle", vol: 0.06 });
+        setTimeout(() => beep({ freq: 990, dur: 0.06, type: "triangle", vol: 0.06 }), 55);
+      }
+      if (name === "gameover") beep({ freq: 180, dur: 0.14, type: "sawtooth", vol: 0.05 });
+    }
+
+    // ---------- Canvas helpers ----------
+    function resizeCanvasToDisplay() {
       const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
       const rect = canvas.getBoundingClientRect();
       const w = Math.floor(rect.width * dpr);
@@ -247,129 +240,291 @@
         canvas.width = w;
         canvas.height = h;
       }
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.setTransform(1,0,0,1,0,0);
       ctx.scale(dpr, dpr);
+      return { w: rect.width, h: rect.height };
     }
 
-    function drawBackground(w, h) {
-      // gradient sky
-      const g = ctx.createLinearGradient(0, 0, 0, h);
+    // ---------- Game state ----------
+    let running = false;
+    let score = 0;
+
+    const state = {
+      w: 0,
+      h: 0,
+      groundY: 0,
+      stack: [],
+      active: null,
+      cameraY: 0,
+      speed: 2.2,
+      perfectTolerance: 4,
+      blockH: 26,
+      baseW: 170
+    };
+
+    function makeBlock(x, y, w, h, color, moving=false) {
+      return { x, y, w, h, color, moving, dir: 1 };
+    }
+
+    function showToast(text, danger=false) {
+      toast.textContent = text;
+      toast.style.borderColor = danger ? "rgba(251,113,133,0.45)" : "rgba(255,255,255,0.14)";
+      toast.style.background = danger ? "rgba(251,113,133,0.16)" : "rgba(255,255,255,0.10)";
+      toast.classList.add("show");
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(()=> toast.classList.remove("show"), 520);
+    }
+
+    function resetGame() {
+      score = 0;
+      scoreEl.textContent = score;
+
+      const { w, h } = resizeCanvasToDisplay();
+      state.w = w; state.h = h;
+      state.groundY = h - 90;
+
+      state.stack = [];
+      state.cameraY = 0;
+
+      // base block
+      const baseX = (w - state.baseW) / 2;
+      const base = makeBlock(baseX, state.groundY - state.blockH, state.baseW, state.blockH, "rgba(255,255,255,0.14)");
+      state.stack.push(base);
+
+      spawnActiveBlock();
+    }
+
+    function spawnActiveBlock() {
+      const top = state.stack[state.stack.length - 1];
+      const nextW = top.w;
+      const startY = top.y - state.blockH - 10;
+
+      const fromLeft = (state.stack.length % 2 === 0);
+      const startX = fromLeft ? -nextW : state.w + nextW;
+
+      state.active = makeBlock(startX, startY, nextW, state.blockH, "#4ade80", true);
+      state.active.dir = fromLeft ? 1 : -1;
+
+      state.speed = 2.2 + Math.min(2.0, score * 0.03);
+    }
+
+    // ---------- Drawing ----------
+    function drawBackground() {
+      const g = ctx.createLinearGradient(0, 0, 0, state.h);
       g.addColorStop(0, "#1b2c49");
       g.addColorStop(1, "#08101d");
       ctx.fillStyle = g;
-      ctx.fillRect(0, 0, w, h);
+      ctx.fillRect(0, 0, state.w, state.h);
 
-      // faint stars
+      // stars
       ctx.globalAlpha = 0.35;
-      for (let i = 0; i < 40; i++) {
-        const x = (i * 97) % w;
-        const y = (i * 53) % (h * 0.55);
-        ctx.fillStyle = "white";
+      ctx.fillStyle = "#fff";
+      for (let i = 0; i < 48; i++) {
+        const x = (i * 97) % state.w;
+        const y = (i * 53) % (state.h * 0.55);
         ctx.fillRect(x, y, 1, 1);
       }
       ctx.globalAlpha = 1;
-    }
-
-    function drawCity(w, h) {
-      const groundY = h - 90;
-
-      // distant glow
-      ctx.globalAlpha = 0.12;
-      ctx.fillStyle = "#60a5fa";
-      ctx.beginPath();
-      ctx.ellipse(w * 0.25, h * 0.25, 140, 90, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-
-      // buildings
-      buildings.forEach(b => {
-        b.x -= b.speed;
-        if (b.x + b.w < -20) b.x = w + 20;
-
-        ctx.fillStyle = "rgba(255,255,255,0.08)";
-        ctx.fillRect(b.x, groundY - b.h, b.w, b.h);
-
-        // windows
-        ctx.globalAlpha = 0.25;
-        ctx.fillStyle = "#f8fafc";
-        for (let yy = groundY - b.h + 10; yy < groundY - 10; yy += 18) {
-          ctx.fillRect(b.x + 6, yy, 3, 3);
-          ctx.fillRect(b.x + 12, yy, 3, 3);
-        }
-        ctx.globalAlpha = 1;
-      });
 
       // ground
       ctx.fillStyle = "rgba(0,0,0,0.35)";
-      ctx.fillRect(0, groundY, w, h - groundY);
+      ctx.fillRect(0, state.groundY, state.w, state.h - state.groundY);
       ctx.fillStyle = "rgba(255,255,255,0.08)";
-      ctx.fillRect(0, groundY, w, 2);
-
-      return groundY;
+      ctx.fillRect(0, state.groundY, state.w, 2);
     }
 
-    function drawBlock(w, groundY) {
-      // moving block (demo)
-      blockX += dir * 2;
-      if (blockX > w - 80) dir = -1;
-      if (blockX < 20) dir = 1;
-
-      // block shadow
-      ctx.globalAlpha = 0.25;
+    function drawBlock(b) {
+      // shadow
+      ctx.globalAlpha = 0.22;
       ctx.fillStyle = "#000";
-      ctx.fillRect(blockX + 6, groundY - 64 + 8, 70, 42);
+      ctx.fillRect(b.x + 6, b.y + 8 - state.cameraY, b.w, b.h);
       ctx.globalAlpha = 1;
 
-      // block
-      ctx.fillStyle = "#4ade80";
-      ctx.fillRect(blockX, groundY - 64, 70, 42);
+      ctx.fillStyle = b.color;
+      ctx.fillRect(b.x, b.y - state.cameraY, b.w, b.h);
 
-      // highlight
-      ctx.globalAlpha = 0.25;
+      // highlight strip
+      ctx.globalAlpha = 0.18;
       ctx.fillStyle = "#fff";
-      ctx.fillRect(blockX + 6, groundY - 60, 58, 5);
+      ctx.fillRect(b.x + 6, (b.y - state.cameraY) + 5, Math.max(0, b.w - 12), 4);
       ctx.globalAlpha = 1;
     }
 
-    function loop() {
-      if (!running) return;
+    function draw() {
+      drawBackground();
 
-      resizeToDisplaySize();
+      // city silhouettes
+      ctx.globalAlpha = 0.10;
+      ctx.fillStyle = "#fff";
+      for (let i = 0; i < 14; i++) {
+        const bw = 18 + (i % 4) * 10;
+        const bh = 90 + (i % 6) * 26;
+        const bx = i * (state.w / 14);
+        ctx.fillRect(bx, state.groundY - bh, bw, bh);
+      }
+      ctx.globalAlpha = 1;
 
-      const w = canvas.getBoundingClientRect().width;
-      const h = canvas.getBoundingClientRect().height;
+      for (const b of state.stack) drawBlock(b);
+      if (state.active) drawBlock(state.active);
 
-      drawBackground(w, h);
-      const groundY = drawCity(w, h);
-      drawBlock(w, groundY);
-
-      requestAnimationFrame(loop);
+      // hint
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle = "#fff";
+      ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Tap to place", state.w / 2, 22);
+      ctx.globalAlpha = 1;
     }
 
-    function startGame() {
-      overlay.style.display = "none";
-      running = true;
-      loop();
+    // ---------- Loop ----------
+    function update() {
+      if (!running) return;
+
+      const { w, h } = resizeCanvasToDisplay();
+      state.w = w; state.h = h;
+      state.groundY = h - 90;
+
+      const a = state.active;
+      if (a && a.moving) {
+        a.x += a.dir * state.speed;
+
+        const pad = 26;
+        if (a.x < -a.w - pad) a.dir = 1;
+        if (a.x > state.w + pad) a.dir = -1;
+      }
+
+      const top = state.stack[state.stack.length - 1];
+      const targetCam = Math.max(0, (top.y - (state.h * 0.62)));
+      state.cameraY += (targetCam - state.cameraY) * 0.08;
+
+      draw();
+      requestAnimationFrame(update);
     }
 
-    // Start button
-    startBtn.addEventListener("click", startGame);
-
-    // Tap anywhere on canvas to “score” (demo)
-    canvas.addEventListener("pointerdown", () => {
+    // ---------- Mechanics ----------
+    function placeBlock() {
       if (!running) return;
+      const a = state.active;
+      if (!a || !a.moving) return;
+
+      const prev = state.stack[state.stack.length - 1];
+
+      const left = Math.max(a.x, prev.x);
+      const right = Math.min(a.x + a.w, prev.x + prev.w);
+      const overlap = right - left;
+
+      if (overlap <= 0) {
+        running = false;
+        showToast("Miss! Game Over", true);
+        sfx("gameover");
+        haptic([30, 40, 30]);
+        endGame();
+        return;
+      }
+
+      const offset = Math.abs(a.x - prev.x);
+      const perfect = offset <= state.perfectTolerance;
+
+      let placedX = left;
+      let placedW = overlap;
+
+      if (perfect) {
+        placedX = prev.x;
+        placedW = prev.w;
+      }
+
+      const newY = prev.y - state.blockH;
+      const placed = makeBlock(placedX, newY, placedW, state.blockH, "rgba(255,255,255,0.16)");
+      state.stack.push(placed);
+
+      // score + feedback
       score += 1;
+
+      sfx("place");
+      haptic([10]);
+
+      if (perfect) {
+        score += 1;
+        showToast("Perfect! +2");
+        sfx("perfect");
+        haptic([15, 30, 15]);
+      }
+
       scoreEl.textContent = score;
+
+      if (score > best) {
+        best = score;
+        localStorage.setItem(BEST_KEY, String(best));
+        bestEl.textContent = best;
+      }
+
+      spawnActiveBlock();
+    }
+
+    function endGame() {
+      overlay.innerHTML = `
+        <div class="card">
+          <h1>Game Over</h1>
+          <p>Your score: <b>${score}</b><br/>Best: <b>${best}</b></p>
+          <div class="btnrow">
+            <button class="btn" id="restartBtn">Restart</button>
+            <button class="btn secondary" id="closeBtn">Close</button>
+          </div>
+          <p style="margin-top:12px;color:rgba(255,255,255,0.70);font-size:12px;">
+            Tip: aim for <b>Perfect</b> alignments to keep full width.
+          </p>
+        </div>
+      `;
+      overlay.style.display = "grid";
+
+      document.getElementById("restartBtn").addEventListener("click", () => {
+        overlay.style.display = "none";
+        resetGame();
+        running = true;
+        update();
+      });
+
+      document.getElementById("closeBtn").addEventListener("click", () => {
+        location.reload();
+      });
+    }
+
+    // ---------- UI ----------
+    howBtn.addEventListener("click", () => {
+      howText.style.display = (howText.style.display === "none") ? "block" : "none";
     });
 
-    // show a nice initial frame even before start
-    (function drawFirstFrame() {
-      resizeToDisplaySize();
-      const w = canvas.getBoundingClientRect().width;
-      const h = canvas.getBoundingClientRect().height;
-      drawBackground(w, h);
-      const groundY = drawCity(w, h);
-      drawBlock(w, groundY);
+    startBtn.addEventListener("click", () => {
+      initAudio(); // unlock audio on start tap
+      overlay.style.display = "none";
+      resetGame();
+      running = true;
+      update();
+    });
+
+    // Tap anywhere on the frame to place
+    document.getElementById("frame").addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      initAudio(); // unlock audio on first gesture
+      if (!running) return;
+      placeBlock();
+    }, { passive: false });
+
+    window.addEventListener("resize", () => {
+      if (!running) {
+        const rect = resizeCanvasToDisplay();
+        state.w = rect.w; state.h = rect.h;
+        state.groundY = rect.h - 90;
+        drawBackground();
+      }
+    });
+
+    // initial still frame behind overlay
+    (function initialDraw(){
+      const rect = resizeCanvasToDisplay();
+      state.w = rect.w; state.h = rect.h;
+      state.groundY = rect.h - 90;
+      drawBackground();
     })();
   </script>
 </body>
