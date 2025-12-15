@@ -9,12 +9,6 @@
   <meta name="theme-color" content="#0b1220">
   <link rel="icon" href="/icons/icon-192.png">
 
-  <!-- Google AdSense -->
-  <script async
-    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXX"
-    crossorigin="anonymous">
-  </script>
-
   <title>City Flip</title>
 
   <style>
@@ -23,64 +17,56 @@
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: radial-gradient(circle at top, #1a2a44, #0b1220);
       color: #fff;
       display: flex;
       flex-direction: column;
+      align-items: center;
     }
 
-    nav {
-      padding: 12px;
-      text-align: center;
+    header {
+      padding: 16px;
+      font-size: 22px;
       font-weight: 600;
     }
 
-    #game {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-    }
-
-    #ad-banner {
-      position: sticky;
-      bottom: 0;
-      width: 100%;
-      background: #0b1220;
-      text-align: center;
-      padding: 6px 0;
-      z-index: 999;
+    canvas {
+      background: #0e1627;
+      border-radius: 12px;
+      margin-top: 16px;
     }
   </style>
 </head>
 
 <body>
+  <header>🏙️ City Flip</header>
 
-  <nav>🏙️ City Flip</nav>
-
-  <!-- GAME CONTAINER -->
-  <div id="game">
-    City Flip Loaded ✅
-  </div>
-
-  <!-- BANNER AD -->
-  <div id="ad-banner">
-    <ins class="adsbygoogle"
-      style="display:block"
-      data-ad-client="ca-pub-XXXXXXXXXXXX"
-      data-ad-slot="BANNER_SLOT_ID"
-      data-ad-format="auto"
-      data-full-width-responsive="true"></ins>
-  </div>
+  <!-- GAME CANVAS -->
+  <canvas id="game" width="320" height="480"></canvas>
 
   <script>
-    (adsbygoogle = window.adsbygoogle || []).push({});
+    console.log("City Flip Loaded ✅");
+
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    let y = 480;
+
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // draw "building"
+      ctx.fillStyle = "#4ade80";
+      ctx.fillRect(120, y, 80, 120);
+
+      y -= 2;
+      if (y < -120) y = 480;
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
   </script>
-
-  <!-- GAME SCRIPT (YOU MUST CREATE THIS FILE) -->
-  <script src="game.js"></script>
-
 </body>
 </html>
