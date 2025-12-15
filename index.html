@@ -4,217 +4,233 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+  <title>Flip City</title>
+
   <!-- PWA -->
-  <link rel="manifest" href="/manifest.webmanifest" />
-  <meta name="theme-color" content="#0b1220" />
-  <link rel="icon" href="/icons/icon-192.png" />
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0b1220">
+  <link rel="icon" href="/icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
 
-  <!-- Google AdSense -->
+  <!-- OPTIONAL: Google AdSense (only works after you add your real client id)
   <script async
-    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9059824893360194"
-    crossorigin="anonymous"></script>
-
-  <title>City Flip</title>
+    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXX"
+    crossorigin="anonymous">
+  </script>
+  -->
 
   <style>
     * { box-sizing: border-box; }
-    body{
-      margin:0; min-height:100vh;
-      background: radial-gradient(circle at top, #1a245f, #05070f);
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      color:#fff; display:flex; justify-content:center; align-items:center;
-      overflow:hidden;
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1a2a44, #0b1220);
+      color: #fff;
     }
-    #app{ width:min(420px,100%); padding:14px; text-align:center; }
-    h1{ margin:6px 0; }
-    .sub{ opacity:.7; font-size:13px; margin-bottom:10px; }
-    .seg{ display:flex; justify-content:center; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
-    .seg button{
-      padding:8px 14px; border-radius:999px; border:none;
-      background:#111a33; color:#9fb0d6; font-weight:700; cursor:pointer;
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(11, 18, 32, 0.75);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
     }
-    .seg button.active{ background:#6ee7ff; color:#000; }
-    .btn{
-      padding:12px 18px; border-radius:14px; border:none;
-      background: linear-gradient(#6ee7ff, #4fd3e8);
-      color:#000; font-weight:900; margin:6px; cursor:pointer;
+
+    nav {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
     }
-    .hud{ display:flex; justify-content:center; gap:12px; font-size:12px; opacity:.85; margin-top:8px; }
-    .grid{ display:grid; grid-template-columns:repeat(4,70px); gap:12px; justify-content:center; margin-top:14px; }
-    .card{
-      width:70px; height:70px; border-radius:16px; background:#111a33;
-      display:flex; align-items:center; justify-content:center;
-      cursor:pointer; transition:transform .12s; user-select:none;
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
     }
-    .card:active{ transform:scale(.95); }
-    .card.revealed{ background:#182149; }
-    .card.matched{ opacity:.85; }
-    .card span{ font-size:52px; line-height:1; }
+
+    .pill {
+      font-size: 12px;
+      padding: 4px 10px;
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 999px;
+      color: rgba(255,255,255,0.85);
+    }
+
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 18px 16px 28px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    @media (min-width: 860px) {
+      .grid { grid-template-columns: 2fr 1fr; }
+    }
+
+    .card {
+      background: rgba(18, 28, 47, 0.88);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      box-shadow: 0 14px 40px rgba(0,0,0,0.38);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .card-header h1, .card-header h2 {
+      margin: 0;
+      font-size: 16px;
+      letter-spacing: 0.2px;
+    }
+
+    .muted { color: rgba(255,255,255,0.7); font-size: 13px; }
+
+    .card-body { padding: 16px; }
+
+    /* Game container styles (your game.js injects inside #game) */
+    #game {
+      min-height: 220px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+    }
+
+    /* Make injected button look good */
+    #game button {
+      margin-top: 12px;
+      padding: 12px 18px;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: #2ea8ff;
+      color: #07111f;
+      font-weight: 700;
+      box-shadow: 0 10px 22px rgba(46,168,255,0.25);
+    }
+
+    #game button:active { transform: scale(0.98); }
+
+    .ad-slot {
+      height: 250px;
+      border-radius: 12px;
+      border: 1px dashed rgba(255,255,255,0.18);
+      display: grid;
+      place-items: center;
+      color: rgba(255,255,255,0.65);
+      background: rgba(0,0,0,0.12);
+    }
+
+    .footer {
+      text-align: center;
+      color: rgba(255,255,255,0.55);
+      font-size: 12px;
+      padding: 8px 0 20px;
+    }
   </style>
 </head>
 
 <body>
-  <main id="app">
-    <h1>City Flip</h1>
-    <div class="sub">Flip fast. Match cities.</div>
+  <header>
+    <nav>
+      <div class="brand">
+        🏙️ Flip City
+        <span class="pill">PWA Ready</span>
+      </div>
+      <div class="muted">Tap • Earn • Upgrade</div>
+    </nav>
+  </header>
 
-    <div class="seg" role="tablist" aria-label="Mode">
-      <button id="classic" class="active" type="button">Classic</button>
-      <button id="time" type="button">Time</button>
-      <button id="daily" type="button">Daily</button>
-    </div>
+  <main class="wrap">
+    <section class="grid">
+      <!-- GAME CARD -->
+      <div class="card">
+        <div class="card-header">
+          <h1>Game</h1>
+          <span class="muted" id="status">Loading…</span>
+        </div>
+        <div class="card-body">
+          <!-- REQUIRED: game.js looks for this exact id -->
+          <div id="game">Loading game…</div>
+        </div>
+      </div>
 
-    <button id="start" class="btn" type="button">Start</button>
+      <!-- SIDE CARD -->
+      <aside class="card">
+        <div class="card-header">
+          <h2>Info</h2>
+          <span class="muted">Tips & Ads</span>
+        </div>
+        <div class="card-body">
+          <p class="muted" style="margin-top:0;">
+            If the game doesn’t show, it’s usually because <b>game.js</b> isn’t in the same folder as <b>index.html</b>
+            or the script tag path is wrong.
+          </p>
 
-    <div class="hud">
-      <div>⏱ <span id="timeVal">—</span></div>
-      <div>⭐ <span id="scoreVal">0</span></div>
-    </div>
+          <div class="ad-slot">
+            Ad slot (optional)
+          </div>
 
-    <div id="grid" class="grid" aria-label="Game board"></div>
+          <!-- OPTIONAL: Real AdSense block goes here once approved
+          <ins class="adsbygoogle"
+               style="display:block"
+               data-ad-client="ca-pub-XXXXXXXXXXXX"
+               data-ad-slot="XXXXXXXXXX"
+               data-ad-format="auto"
+               data-full-width-responsive="true"></ins>
+          <script>
+            (adsbygoogle = window.adsbygoogle || []).push({});
+          </script>
+          -->
+        </div>
+      </aside>
+    </section>
+
+    <div class="footer">© <span id="year"></span> Flip City</div>
   </main>
 
+  <!-- Load game.js LAST so #game definitely exists -->
+  <script src="./game.js"></script>
+
+  <!-- Small helpers (safe, won’t break your game) -->
   <script>
-    /* ========================= GAME DATA ========================= */
-    // Use real emoji (your README showed mostly blanks)
-    const icons = ["🏙️","🌉","🗼","🏰","🏟️","🛣️","🚦","🗽"];
+    document.getElementById("year").textContent = new Date().getFullYear();
 
-    let deck = [];
-    let first = null;
-    let lock = false;
-    let score = 0;
-    let timeLeft = 60;
-    let timer = null;
-    let mode = "classic";
+    // Status indicator: if game.js injects content, we show "Ready"
+    const status = document.getElementById("status");
+    const gameEl = document.getElementById("game");
+    setTimeout(() => {
+      if (gameEl && gameEl.querySelector("button, h2, h1, p")) status.textContent = "Ready";
+      else status.textContent = "Waiting for game.js";
+    }, 300);
 
-    /* ========================= MONETIZATION (STUB) ========================= */
-    function rewardedAd(callback){
-      alert("Ad watched ✔");
-      callback();
-    }
-
-    /* ========================= GAME LOGIC ========================= */
-    const grid = document.getElementById("grid");
-    const scoreVal = document.getElementById("scoreVal");
-    const timeVal = document.getElementById("timeVal");
-
-    function shuffle(){
-      deck = [...icons, ...icons].sort(()=>Math.random()-0.5);
-    }
-
-    function build(){
-      grid.innerHTML = "";
-      shuffle();
-      deck.forEach(icon=>{
-        const c = document.createElement("div");
-        c.className = "card";
-        c.dataset.icon = icon;
-        c.onclick = ()=>flip(c);
-        grid.appendChild(c);
-      });
-    }
-
-    function reveal(card){
-      card.innerHTML = "<span>" + card.dataset.icon + "</span>";
-      card.classList.add("revealed");
-    }
-
-    function hide(card){
-      card.innerHTML = "";
-      card.classList.remove("revealed");
-    }
-
-    function flip(card){
-      if(lock || card.classList.contains("matched") || card === first) return;
-
-      reveal(card);
-
-      if(!first){ first = card; return; }
-
-      if(first.dataset.icon === card.dataset.icon){
-        first.classList.add("matched");
-        card.classList.add("matched");
-        score += 100;
-        scoreVal.textContent = score;
-        first = null;
-
-        if(document.querySelectorAll(".matched").length === 16){
-          endGame(true);
-        }
-      } else {
-        lock = true;
-        setTimeout(()=>{
-          hide(first);
-          hide(card);
-          first = null;
-          lock = false;
-        }, 600);
-      }
-    }
-
-    function startTimer(){
-      clearInterval(timer);
-      timeVal.textContent = timeLeft;
-      timer = setInterval(()=>{
-        timeLeft--;
-        timeVal.textContent = timeLeft;
-        if(timeLeft <= 0){
-          endGame(false);
-        }
-      }, 1000);
-    }
-
-    function endGame(win){
-      clearInterval(timer);
-      setTimeout(()=>{
-        if(!win && mode !== "classic"){
-          rewardedAd(reset);
-        } else {
-          alert(win ? "You win!" : "Try again!");
-          reset();
-        }
-      }, 300);
-    }
-
-    function setActive(btnId){
-      ["classic","time","daily"].forEach(id=>{
-        document.getElementById(id).classList.toggle("active", id === btnId);
-      });
-    }
-
-    function reset(){
-      clearInterval(timer);
-      score = 0;
-      timeLeft = 60;
-      scoreVal.textContent = "0";
-      timeVal.textContent = (mode === "time") ? String(timeLeft) : "—";
-      first = null;
-      lock = false;
-      build();
-    }
-
-    document.getElementById("start").onclick = ()=>{
-      reset();
-      if(mode === "time") startTimer();
-    };
-    document.getElementById("classic").onclick = ()=>{
-      mode="classic"; setActive("classic"); reset();
-    };
-    document.getElementById("time").onclick = ()=>{
-      mode="time"; setActive("time"); reset();
-    };
-    document.getElementById("daily").onclick = ()=>{
-      mode="daily"; setActive("daily"); reset();
-    };
-
-    build();
-
-    /* ========================= SERVICE WORKER ========================= */
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/sw.js").catch(()=>{});
-      });
-    }
+    // Optional: register service worker if you add /sw.js later
+    // if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(()=>{});
   </script>
 </body>
 </html>
