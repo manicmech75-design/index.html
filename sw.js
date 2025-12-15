@@ -1,4 +1,4 @@
-const CACHE_NAME = "cityflip-cache-v1";
+const CACHE_NAME = "cityflip-cache-v2";
 const ASSETS = [
   "/",
   "/index.html",
@@ -28,7 +28,6 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     caches.match(event.request).then((cached) => {
       return cached || fetch(event.request).then((resp) => {
-        // cache new requests (safe for simple sites)
         const copy = resp.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         return resp;
