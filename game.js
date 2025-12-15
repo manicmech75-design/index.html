@@ -1,5 +1,8 @@
+// game.js
 document.addEventListener("DOMContentLoaded", () => {
   console.log("Game loaded");
+
+  const SAVE_KEY = "flipcity_save_v1";
 
   let coins = 0;
 
@@ -8,6 +11,36 @@ document.addEventListener("DOMContentLoaded", () => {
     autoEarn:   { level: 0, baseCost: 25, costMult: 1.7, cpsPerLevel: 0.2 },
     critChance: { level: 0, baseCost: 50, costMult: 1.8, addPerLevel: 0.02 }
   };
+
+  function saveGame() {
+    const data = {
+      coins,
+      upgrades: {
+        clickPower: upgrades.clickPower.level,
+        autoEarn: upgrades.autoEarn.level,
+        critChance: upgrades.critChance.level
+      }
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  }
+
+  function loadGame() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return;
+
+      const data = JSON.parse(raw);
+      if (typeof data.coins === "number") coins = data.coins;
+
+      if (data.upgrades) {
+        if (typeof data.upgrades.clickPower === "number") upgrades.clickPower.level = data.upgrades.clickPower;
+        if (typeof data.upgrades.autoEarn === "number") upgrades.autoEarn.level = data.upgrades.autoEarn;
+        if (typeof data.upgrades.critChance === "number") upgrades.critChance.level = data.upgrades.critChance;
+      }
+    } catch (e) {
+      console.warn("Save data invalid, starting fresh.");
+    }
+  }
 
   function upgradeCost(key) {
     const u = upgrades[key];
@@ -33,6 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
     coins -= cost;
     upgrades[key].level += 1;
     updateUI();
+    saveGame();
   }
 
   function earnClick() {
@@ -44,6 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     coins += gained;
     updateUI();
+    saveGame();
   }
 
   const game = document.getElementById("game");
@@ -67,6 +102,10 @@ document.addEventListener("DOMContentLoaded", () => {
       <button id="buyAutoEarn"></button>
       <button id="buyCrit"></button>
     </div>
+
+    <div style="margin-top:14px; opacity:.75; font-size:12px;">
+      <button id="resetSave" style="background: rgba(255,255,255,0.12); color:#fff; box-shadow:none;">Reset Save</button>
+    </div>
   `;
 
   document.getElementById("earn").onclick = earnClick;
@@ -74,13 +113,29 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("buyAutoEarn").onclick   = () => buyUpgrade("autoEarn");
   document.getElementById("buyCrit").onclick       = () => buyUpgrade("critChance");
 
+  document.getElementById("resetSave").onclick = () => {
+    localStorage.removeItem(SAVE_KEY);
+    coins = 0;
+    upgrades.clickPower.level = 0;
+    upgrades.autoEarn.level = 0;
+    upgrades.critChance.level = 0;
+    updateUI();
+  };
+
+  // Load saved data BEFORE starting loops/UI updates
+  loadGame();
+  updateUI();
+
+  // Auto earn loop
   setInterval(() => {
     const cps = upgrades.autoEarn.level * upgrades.autoEarn.cpsPerLevel;
     if (cps > 0) {
       coins += cps;
       updateUI();
+      saveGame();
     }
   }, 1000);
 
-  updateUI();
+  // Backup save (in case they idle)
+  setInterval(saveGame, 5000);
 });
