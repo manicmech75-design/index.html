@@ -4,8 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>City Flip</title>
-
   <!-- PWA -->
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#0b1220">
@@ -17,41 +15,50 @@
     crossorigin="anonymous">
   </script>
 
-  <!-- Layout + Ad CSS -->
+  <title>City Flip</title>
+
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
       min-height: 100vh;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: radial-gradient(circle at top, #1a2a44, #0b1220);
-      color: #ffffff;
-      padding-bottom: 70px; /* space for ad */
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+    }
+
+    nav {
+      padding: 12px;
+      text-align: center;
+      font-weight: 600;
     }
 
     #game {
+      flex: 1;
       display: flex;
-      justify-content: center;
       align-items: center;
-      height: calc(100vh - 70px);
+      justify-content: center;
       font-size: 24px;
     }
 
     #ad-banner {
-      position: fixed;
+      position: sticky;
       bottom: 0;
       width: 100%;
-      z-index: 999;
       background: #0b1220;
       text-align: center;
+      padding: 6px 0;
+      z-index: 999;
     }
   </style>
 </head>
 
 <body>
+
+  <nav>🏙️ City Flip</nav>
 
   <!-- GAME CONTAINER -->
   <div id="game">
@@ -61,19 +68,19 @@
   <!-- BANNER AD -->
   <div id="ad-banner">
     <ins class="adsbygoogle"
-         style="display:block"
-         data-ad-client="ca-pub-XXXXXXXXXXXX"
-         data-ad-slot="BANNER_SLOT_ID"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
+      style="display:block"
+      data-ad-client="ca-pub-XXXXXXXXXXXX"
+      data-ad-slot="BANNER_SLOT_ID"
+      data-ad-format="auto"
+      data-full-width-responsive="true"></ins>
   </div>
 
   <script>
     (adsbygoogle = window.adsbygoogle || []).push({});
   </script>
 
-  <!-- GAME SCRIPT (ADD YOUR REAL FILE HERE) -->
-  <!-- Example: <script src="game.js"></script> -->
+  <!-- GAME SCRIPT (YOU MUST CREATE THIS FILE) -->
+  <script src="game.js"></script>
 
 </body>
 </html>
