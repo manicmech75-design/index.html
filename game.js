@@ -1,111 +1,57 @@
-// Flip City - FULL GAME: upgrades + buildings + achievements + prestige + saving + offline earnings
+// Flip City - Full game script (Upgrades + Buildings + Tiles + Prestige + Achieves + Save + Tests)
 document.addEventListener("DOMContentLoaded", () => {
-  const SAVE_KEY = "flipcity_save_v4_all"; // bump when you change structure
+  const SAVE_KEY = "flipcity_save_v5_tiles_upgrades";
+  const DEV_MODE = true; // 🔧 set false when you want to hide dev panel
 
   // ---------- Upgrade definitions ----------
   const UPG = {
-    clickPower:  { name: "Click Power",   desc: "+1 coin per click",           base: 10,  mult: 1.55, max: 200 },
-    autoEarn:    { name: "Auto Earn",     desc: "+0.25 coins/sec",             base: 25,  mult: 1.60, max: 200 },
-    critChance:  { name: "Crit Chance",   desc: "+2% crit chance (cap 60%)",   base: 50,  mult: 1.70, max: 50  },
-    critPower:   { name: "Crit Power",    desc: "+0.5 crit multiplier (cap 10x)", base: 75, mult: 1.75, max: 50 },
-    coinMult:    { name: "Coin Mult",     desc: "+10% all earnings",           base: 100, mult: 1.80, max: 100 },
-    streakBonus: { name: "Lucky Streak",  desc: "Stronger streak bonus",       base: 150, mult: 1.85, max: 100 },
-    offlineBoost:{ name: "Offline Boost", desc: "+20% offline earnings",       base: 200, mult: 1.90, max: 100 }
-  };
-  
-const DEV_MODE = true; // 🔧 set to false for production
+    // Core
+    clickPower:  { name: "Click Power",   desc: "+1 coin per click", base: 10,  mult: 1.55, max: 200 },
+    autoEarn:    { name: "Auto Earn",     desc: "+0.25 coins/sec",   base: 25,  mult: 1.60, max: 200 },
+    critChance:  { name: "Crit Chance",   desc: "+2% crit chance (cap 60%)", base: 50,  mult: 1.70, max: 50  },
+    critPower:   { name: "Crit Power",    desc: "+0.5 crit mult (cap 10x)",  base: 75,  mult: 1.75, max: 50  },
+    coinMult:    { name: "Coin Mult",     desc: "+10% all earnings", base: 100, mult: 1.80, max: 100 },
+    streakBonus: { name: "Lucky Streak",  desc: "Stronger streak bonus", base: 150, mult: 1.85, max: 100 },
+    offlineBoost:{ name: "Offline Boost", desc: "+20% offline earnings", base: 200, mult: 1.90, max: 100 },
 
-  // ---------- Buildings definitions ----------
-  // Each building produces coins/sec (baseCps) and costs scale by costMult per owned.
+    // NEW (More Upgrades)
+    megaClick:   { name: "Mega Click",    desc: "Chance to get a 10x click (cap 25%)", base: 500, mult: 1.90, max: 50 },
+    goldenChance:{ name: "Golden Chance", desc: "Chance each second to get a bonus burst", base: 750, mult: 1.85, max: 50 },
+    comboPower:  { name: "Click Combo",   desc: "Rapid clicks stack extra power", base: 400, mult: 1.80, max: 100 },
+    efficiency:  { name: "Efficiency",    desc: "Buildings cost less (cap 40%)", base: 1000, mult: 1.90, max: 50 },
+    overclock:   { name: "Overclock",     desc: "Auto earnings boosted (+10% each level)", base: 1200, mult: 1.95, max: 50 },
+    timeWarp:    { name: "Time Warp",     desc: "Offline earnings boosted by playtime", base: 2000, mult: 2.00, max: 25 },
+  };
+
+  // ---------- Building definitions ----------
   const BLD = {
-    kiosk:   { name: "Snack Kiosk",  desc: "Small steady income",      baseCost: 100,  costMult: 1.18, baseCps: 1 },
-    shop:    { name: "Corner Shop",  desc: "Neighborhood revenue",     baseCost: 600,  costMult: 1.20, baseCps: 6 },
-    factory: { name: "Factory",      desc: "Industrial output",        baseCost: 3500, costMult: 1.22, baseCps: 35 },
-    tower:   { name: "Office Tower", desc: "Big city business",        baseCost: 20000,costMult: 1.24, baseCps: 200 },
-    district:{ name: "Mega District",desc: "Massive passive income",   baseCost: 120000,costMult: 1.26, baseCps: 1200 }
+    kiosk:   { name: "Snack Kiosk",  desc: "Small steady income",    baseCost: 100,    costMult: 1.18, baseCps: 1 },
+    shop:    { name: "Corner Shop",  desc: "Neighborhood revenue",   baseCost: 600,    costMult: 1.20, baseCps: 6 },
+    factory: { name: "Factory",      desc: "Industrial output",      baseCost: 3500,   costMult: 1.22, baseCps: 35 },
+    tower:   { name: "Office Tower", desc: "Big city business",      baseCost: 20000,  costMult: 1.24, baseCps: 200 },
+    district:{ name: "Mega District",desc: "Massive passive income", baseCost: 120000, costMult: 1.26, baseCps: 1200 },
   };
-  
-// ---------- DEV / TEST HELPERS ----------
-function devGiveCoins(amount = 1000) {
-  state.coins += amount;
-  state.totalEarned += amount;
-  updateHUD();
-  save();
-}
 
-function devMaxUpgrades() {
-  for (const k of Object.keys(UPG)) {
-    state.upgrades[k] = UPG[k].max;
-  }
-  updateHUD();
-  renderAll();
-  save();
-}
-
-function devBuyAllBuildings(count = 10) {
-  for (const k of Object.keys(BLD)) {
-    state.buildings[k] += count;
-  }
-  updateHUD();
-  renderAll();
-  save();
-}
-
-function devGivePrestige(points = 10) {
-  state.prestigePoints += points;
-  save();
-  renderAll();
-}
-
-function devResetRunOnly() {
-  state.coins = 0;
-  state.streak = 0;
-  state.lastClickAt = 0;
-  for (const k of Object.keys(state.upgrades)) state.upgrades[k] = 0;
-  for (const k of Object.keys(state.buildings)) state.buildings[k] = 0;
-  save();
-  renderAll();
-}
-
-function devSelfTest() {
-  console.group("Flip City Dev Test");
-
-  try {
-    devGiveCoins(1000);
-    console.log("✔ Coins add");
-
-    devMaxUpgrades();
-    console.log("✔ Upgrades max");
-
-    devBuyAllBuildings(5);
-    console.log("✔ Buildings buy");
-
-    devGivePrestige(5);
-    console.log("✔ Prestige add");
-
-    checkAchievements();
-    console.log("✔ Achievements check");
-
-    console.log("🎉 ALL TESTS PASSED");
-  } catch (e) {
-    console.error("❌ TEST FAILED", e);
-  }
-
-  console.groupEnd();
-}
+  // Tile icons for buildings
+  const BUILDING_ICONS = {
+    kiosk: "🏪",
+    shop: "🏬",
+    factory: "🏭",
+    tower: "🏢",
+    district: "🏙️",
+  };
 
   // ---------- Achievements ----------
-  // Rewards: add a permanent bonus to prestige multiplier or give coins
   const ACH = [
-    { id:"first_click",  name:"First Tap",         desc:"Earn your first coin",              check:s=>s.totalEarned>=1,        reward:{ coins:50 } },
-    { id:"hundred",      name:"Pocket Change",     desc:"Earn 100 total coins",              check:s=>s.totalEarned>=100,      reward:{ coins:200 } },
-    { id:"thousand",     name:"Getting Serious",   desc:"Earn 1,000 total coins",            check:s=>s.totalEarned>=1000,     reward:{ coins:1000 } },
-    { id:"builder1",     name:"Builder",           desc:"Buy 1 building",                    check:s=>totalBuildings(s)>=1,    reward:{ coins:500 } },
-    { id:"builder10",    name:"City Planner",      desc:"Buy 10 buildings",                  check:s=>totalBuildings(s)>=10,   reward:{ coins:2500 } },
-    { id:"upgrade5",     name:"Tech Up",           desc:"Buy 5 total upgrade levels",        check:s=>totalUpgradeLevels(s)>=5,reward:{ coins:500 } },
-    { id:"upgrade25",    name:"Optimized",         desc:"Buy 25 total upgrade levels",       check:s=>totalUpgradeLevels(s)>=25,reward:{ coins:5000 } },
-    { id:"prestige1",    name:"Fresh Start",       desc:"Prestige once",                     check:s=>s.prestigeCount>=1,      reward:{ permMult:0.02 } },
-    { id:"million",      name:"Millionaire",       desc:"Earn 1,000,000 total coins",        check:s=>s.totalEarned>=1e6,      reward:{ permMult:0.05 } }
+    { id:"first_click", name:"First Tap", desc:"Earn your first coin", check:s=>s.totalEarned>=1, reward:{ coins:50 } },
+    { id:"hundred", name:"Pocket Change", desc:"Earn 100 total coins", check:s=>s.totalEarned>=100, reward:{ coins:200 } },
+    { id:"thousand", name:"Getting Serious", desc:"Earn 1,000 total coins", check:s=>s.totalEarned>=1000, reward:{ coins:1000 } },
+    { id:"builder1", name:"Builder", desc:"Buy 1 building", check:s=>totalBuildings(s)>=1, reward:{ coins:500 } },
+    { id:"builder10", name:"City Planner", desc:"Buy 10 buildings", check:s=>totalBuildings(s)>=10, reward:{ coins:2500 } },
+    { id:"upgrade5", name:"Tech Up", desc:"Buy 5 total upgrade levels", check:s=>totalUpgradeLevels(s)>=5, reward:{ coins:500 } },
+    { id:"upgrade25", name:"Optimized", desc:"Buy 25 total upgrade levels", check:s=>totalUpgradeLevels(s)>=25, reward:{ coins:5000 } },
+    { id:"prestige1", name:"Fresh Start", desc:"Prestige once", check:s=>s.prestigeCount>=1, reward:{ permMult:0.02 } },
+    { id:"million", name:"Millionaire", desc:"Earn 1,000,000 total coins", check:s=>s.totalEarned>=1e6, reward:{ permMult:0.05 } },
   ];
 
   // ---------- State ----------
@@ -113,18 +59,21 @@ function devSelfTest() {
     coins: 0,
     totalEarned: 0,
     lastSave: Date.now(),
+
     streak: 0,
     lastClickAt: 0,
+
+    playTimeSeconds: 0,
 
     upgrades: Object.fromEntries(Object.keys(UPG).map(k => [k, 0])),
     buildings: Object.fromEntries(Object.keys(BLD).map(k => [k, 0])),
 
-    // prestige
     prestigeCount: 0,
-    prestigePoints: 0,          // spendable
-    prestigeSpent: 0,           // total spent
-    permMultBonus: 0,           // extra permanent multiplier from achievements (additive)
-    achieved: {}                // {id:true}
+    prestigePoints: 0,
+    prestigeSpent: 0,
+    permMultBonus: 0,
+
+    achieved: {}
   };
 
   // ---------- Utils ----------
@@ -138,12 +87,8 @@ function devSelfTest() {
     return (n < 10 ? n.toFixed(2) : n < 100 ? n.toFixed(1) : n.toFixed(0)) + u[i];
   };
 
-  function totalBuildings(s) {
-    return Object.values(s.buildings).reduce((a,b)=>a+(b||0),0);
-  }
-  function totalUpgradeLevels(s) {
-    return Object.values(s.upgrades).reduce((a,b)=>a+(b||0),0);
-  }
+  function totalBuildings(s){ return Object.values(s.buildings).reduce((a,b)=>a+(b||0),0); }
+  function totalUpgradeLevels(s){ return Object.values(s.upgrades).reduce((a,b)=>a+(b||0),0); }
 
   // ---------- Costs ----------
   function upgCost(key) {
@@ -152,23 +97,27 @@ function devSelfTest() {
     return Math.ceil(def.base * Math.pow(def.mult, lvl));
   }
 
+  function efficiencyDiscount() {
+    // -1% per level, cap 40%
+    return 1 - clamp(0.01 * (state.upgrades.efficiency || 0), 0, 0.40);
+  }
+
   function bldCost(key) {
     const owned = state.buildings[key] || 0;
     const def = BLD[key];
-    return Math.ceil(def.baseCost * Math.pow(def.costMult, owned));
+    return Math.ceil(def.baseCost * Math.pow(def.costMult, owned) * efficiencyDiscount());
   }
 
   // ---------- Multipliers / Earnings ----------
   function prestigeMult() {
-    // Each prestige point spent gives +2% permanent multiplier
     const spent = state.prestigeSpent || 0;
-    const base = 1 + spent * 0.02;
+    const base = 1 + spent * 0.02; // +2% per spent point
     return base + (state.permMultBonus || 0);
   }
 
   function globalMult() {
-    // coinMult upgrade: +10% per level
-    return (1 + 0.10 * (state.upgrades.coinMult || 0)) * prestigeMult();
+    const coinMult = 1 + 0.10 * (state.upgrades.coinMult || 0);
+    return coinMult * prestigeMult();
   }
 
   function clickPower() {
@@ -189,20 +138,33 @@ function devSelfTest() {
     return clamp(m, 1, 4.0);
   }
 
+  function comboMult() {
+    // ComboPower: rapid clicking stacks more.
+    // Use streak as the "combo counter"
+    const lvl = state.upgrades.comboPower || 0;
+    if (lvl <= 0) return 1;
+    const stack = clamp(state.streak, 0, 20); // limit stack
+    return 1 + stack * 0.02 * lvl;
+  }
+
   function autoCpsFromUpgrade() {
     return (state.upgrades.autoEarn || 0) * 0.25;
   }
 
   function bldCpsRaw() {
     let cps = 0;
-    for (const k of Object.keys(BLD)) {
-      cps += (state.buildings[k] || 0) * BLD[k].baseCps;
-    }
+    for (const k of Object.keys(BLD)) cps += (state.buildings[k] || 0) * BLD[k].baseCps;
     return cps;
   }
 
+  function overclockMult() {
+    // +10% auto earnings per level
+    return 1 + 0.10 * (state.upgrades.overclock || 0);
+  }
+
   function totalCps() {
-    return (autoCpsFromUpgrade() + bldCpsRaw()) * globalMult();
+    // Overclock boosts ALL passive income in this build (simple + strong)
+    return (autoCpsFromUpgrade() + bldCpsRaw()) * globalMult() * overclockMult();
   }
 
   // ---------- Save/Load ----------
@@ -218,26 +180,32 @@ function devSelfTest() {
       const data = JSON.parse(raw);
       if (!data || typeof data !== "object") return;
 
-      // Basic
-      state.coins = typeof data.coins === "number" ? data.coins : 0;
-      state.totalEarned = typeof data.totalEarned === "number" ? data.totalEarned : 0;
-      state.lastSave = typeof data.lastSave === "number" ? data.lastSave : Date.now();
-      state.streak = typeof data.streak === "number" ? data.streak : 0;
-      state.lastClickAt = typeof data.lastClickAt === "number" ? data.lastClickAt : 0;
+      // basics
+      state.coins = Number(data.coins || 0);
+      state.totalEarned = Number(data.totalEarned || 0);
+      state.lastSave = Number(data.lastSave || Date.now());
+      state.streak = Number(data.streak || 0);
+      state.lastClickAt = Number(data.lastClickAt || 0);
+      state.playTimeSeconds = Number(data.playTimeSeconds || 0);
 
-      // Upgrades/buildings
-      if (data.upgrades) for (const k of Object.keys(state.upgrades)) state.upgrades[k] = Number(data.upgrades[k] || 0);
-      if (data.buildings) for (const k of Object.keys(state.buildings)) state.buildings[k] = Number(data.buildings[k] || 0);
-
-      // Prestige
+      // prestige
       state.prestigeCount = Number(data.prestigeCount || 0);
       state.prestigePoints = Number(data.prestigePoints || 0);
       state.prestigeSpent = Number(data.prestigeSpent || 0);
       state.permMultBonus = Number(data.permMultBonus || 0);
 
+      // achievements
       state.achieved = (data.achieved && typeof data.achieved === "object") ? data.achieved : {};
+
+      // merge upgrades/buildings safely (supports new upgrades later)
+      if (data.upgrades && typeof data.upgrades === "object") {
+        for (const k of Object.keys(UPG)) state.upgrades[k] = Number(data.upgrades[k] || 0);
+      }
+      if (data.buildings && typeof data.buildings === "object") {
+        for (const k of Object.keys(BLD)) state.buildings[k] = Number(data.buildings[k] || 0);
+      }
     } catch {
-      // ignore bad saves
+      // ignore invalid save
     }
   }
 
@@ -250,7 +218,12 @@ function devSelfTest() {
     const base = cps * secondsAway;
 
     const offMult = 1 + 0.20 * (state.upgrades.offlineBoost || 0);
-    const gained = base * offMult;
+
+    // Time Warp: based on playtime (cap 24h)
+    const playHours = clamp((state.playTimeSeconds || 0) / 3600, 0, 24);
+    const warpBonus = 1 + playHours * 0.02 * (state.upgrades.timeWarp || 0);
+
+    const gained = base * offMult * warpBonus;
 
     if (gained > 0) {
       state.coins += gained;
@@ -272,26 +245,19 @@ function devSelfTest() {
   }
 
   function checkAchievements() {
-    let unlocked = 0;
     for (const a of ACH) {
       if (state.achieved[a.id]) continue;
       if (a.check(state)) {
         state.achieved[a.id] = true;
         grantReward(a.reward);
-        unlocked++;
-        toast(`Achievement unlocked: ${a.name}!`);
+        toast(`🏆 Achievement: ${a.name}!`);
       }
-    }
-    if (unlocked) {
-      save();
-      renderAll();
     }
   }
 
   // ---------- Prestige ----------
   function prestigeAvailablePoints() {
-    // Award points based on totalEarned (lifetime)
-    // Example: totalEarned 1,000,000 => sqrt(1) * 10 = 10 points
+    // based on lifetime earned (millions)
     const earnedMillions = state.totalEarned / 1_000_000;
     const totalPoints = Math.floor(Math.sqrt(Math.max(0, earnedMillions)) * 10);
     const already = (state.prestigePoints || 0) + (state.prestigeSpent || 0);
@@ -300,16 +266,12 @@ function devSelfTest() {
 
   function doPrestige() {
     const gain = prestigeAvailablePoints();
-    if (gain <= 0) {
-      toast("No prestige points available yet.");
-      return;
-    }
-    if (!confirm(`Prestige will reset coins, upgrades, and buildings.\nYou will gain ${gain} Prestige Points.\nProceed?`)) return;
+    if (gain <= 0) return toast("No prestige points available yet.");
+    if (!confirm(`Prestige resets coins/upgrades/buildings.\nGain ${gain} Prestige Points?\nProceed?`)) return;
 
     state.prestigeCount += 1;
     state.prestigePoints += gain;
 
-    // reset run progress (keep lifetime + prestige)
     state.coins = 0;
     state.streak = 0;
     state.lastClickAt = 0;
@@ -320,16 +282,13 @@ function devSelfTest() {
     save();
     renderAll();
     checkAchievements();
-    toast(`Prestiged! +${gain} Prestige Points.`);
+    toast(`⭐ Prestiged! +${gain} points`);
   }
 
   function spendPrestige(points) {
     points = Math.max(0, Math.floor(points));
     if (points <= 0) return;
-    if (state.prestigePoints < points) {
-      toast("Not enough Prestige Points.");
-      return;
-    }
+    if (state.prestigePoints < points) return toast("Not enough Prestige Points.");
     state.prestigePoints -= points;
     state.prestigeSpent += points;
     save();
@@ -342,9 +301,9 @@ function devSelfTest() {
   if (!gameEl) return;
 
   gameEl.innerHTML = `
-    <div style="width:min(720px, 100%); margin:0 auto; text-align:center;">
+    <div style="width:min(760px, 100%); margin:0 auto; text-align:center;">
       <div style="font-size:28px; font-weight:900;">🏙️ Flip City</div>
-      <div style="margin-top:8px; opacity:.85;">Tap, build, upgrade, complete achievements, and prestige.</div>
+      <div style="margin-top:8px; opacity:.85;">Tap, upgrade, build, prestige — now with a city tile grid.</div>
 
       <div style="margin-top:18px;">
         <button id="earnBtn" style="min-width:min(520px,100%);">Earn 💰</button>
@@ -353,15 +312,15 @@ function devSelfTest() {
       <div style="margin-top:10px; font-size:16px;">
         <div><b>Coins:</b> <span id="coinsText">0</span></div>
         <div style="margin-top:4px; opacity:.8;">
-          <span id="cpsText">0</span> / sec ·
-          <span id="clickText">1</span> / click ·
+          <span id="cpsText">0</span>/sec ·
+          <span id="clickText">1</span>/click ·
           Crit <span id="critText">0%</span> (<span id="critMultText">2x</span>) ·
           Mult <span id="multText">1.00x</span> ·
           Prestige <span id="prestigeMultText">1.00x</span>
         </div>
       </div>
 
-      <hr style="width:100%; max-width:680px; border:none; border-top:1px solid rgba(255,255,255,.12); margin:18px auto;">
+      <hr style="width:100%; max-width:720px; border:none; border-top:1px solid rgba(255,255,255,.12); margin:18px auto;">
 
       <div style="display:grid; gap:14px; text-align:left;">
         <div>
@@ -372,6 +331,18 @@ function devSelfTest() {
         <div>
           <div style="font-size:18px; font-weight:900; margin-bottom:8px; text-align:center;">Buildings</div>
           <div id="buildingList" style="display:grid; gap:10px;"></div>
+        </div>
+
+        <div>
+          <div style="font-size:18px; font-weight:900; margin-bottom:8px; text-align:center;">City</div>
+          <div id="cityGrid"
+            style="
+              display:grid;
+              grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+              gap:8px;
+              max-width:760px;
+              margin:0 auto;
+            "></div>
         </div>
 
         <div>
@@ -391,6 +362,22 @@ function devSelfTest() {
         <button id="exportBtn" style="background: rgba(255,255,255,.12); color:#fff; box-shadow:none;">Export</button>
         <button id="importBtn" style="background: rgba(255,255,255,.12); color:#fff; box-shadow:none;">Import</button>
       </div>
+
+      ${DEV_MODE ? `
+      <hr style="margin:18px auto; border-top:1px dashed rgba(255,255,255,.20); width:100%; max-width:720px;">
+      <div style="text-align:center;">
+        <div style="font-weight:900; margin-bottom:6px;">🧪 DEV PANEL</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+          <button id="dev1k">+1K</button>
+          <button id="dev1m">+1M</button>
+          <button id="devUpg">Max Upgrades</button>
+          <button id="devBld">+10 Buildings</button>
+          <button id="devPrest">+10 Prestige</button>
+          <button id="devResetRun">Reset Run</button>
+          <button id="devTest">Run Tests</button>
+        </div>
+      </div>
+      ` : ""}
 
       <div id="toast" style="margin-top:12px; min-height:18px; opacity:.9; font-size:13px;"></div>
       <div style="margin-top:8px; opacity:.65; font-size:12px;">
@@ -427,7 +414,6 @@ function devSelfTest() {
   function renderUpgrades() {
     const list = $("upgradeList");
     list.innerHTML = "";
-
     for (const key of Object.keys(UPG)) {
       const def = UPG[key];
       const lvl = state.upgrades[key] || 0;
@@ -457,29 +443,68 @@ function devSelfTest() {
       const def = BLD[key];
       const owned = state.buildings[key] || 0;
       const c = bldCost(key);
-      const cpsEach = def.baseCps * globalMult();
-      const cpsTotal = owned * cpsEach;
+
+      const each = def.baseCps * globalMult() * overclockMult();
+      const total = owned * each;
 
       const wrapper = document.createElement("div");
       wrapper.innerHTML = rowBoxHTML(
         `${def.name} <span style="opacity:.7; font-weight:700;">(Owned ${owned})</span>`,
-        `${def.desc} · +${fmt(cpsEach)}/sec each`,
+        `${def.desc} · +${fmt(each)}/sec each`,
         `${fmt(c)} coins`,
         `<button data-bld="${key}">Buy</button>`
       );
       list.appendChild(wrapper.firstElementChild);
 
-      // show owned cps line
-      const last = list.lastElementChild;
       const extra = document.createElement("div");
       extra.style.cssText = "opacity:.7; font-size:12px; margin-top:-2px;";
-      extra.textContent = `Current from this building: ${fmt(cpsTotal)}/sec`;
-      last.appendChild(extra);
+      extra.textContent = `Current from this building: ${fmt(total)}/sec`;
+      list.lastElementChild.appendChild(extra);
     }
 
     list.querySelectorAll("button[data-bld]").forEach(btn => {
       btn.onclick = () => buyBuilding(btn.getAttribute("data-bld"));
     });
+  }
+
+  function renderCity() {
+    const grid = $("cityGrid");
+    if (!grid) return;
+    grid.innerHTML = "";
+
+    for (const key of Object.keys(BLD)) {
+      const count = state.buildings[key] || 0;
+      const icon = BUILDING_ICONS[key] || "⬜";
+
+      for (let i = 0; i < count; i++) {
+        const tile = document.createElement("div");
+        tile.textContent = icon;
+
+        tile.title = `${BLD[key].name}\nOwned: ${count}\n+${fmt(BLD[key].baseCps * globalMult() * overclockMult())}/sec each`;
+
+        tile.style.cssText = `
+          height:48px;
+          border-radius:10px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-size:24px;
+          background: rgba(255,255,255,0.08);
+          border: 1px solid rgba(255,255,255,0.12);
+          cursor: default;
+        `;
+        grid.appendChild(tile);
+      }
+    }
+
+    if (!grid.children.length) {
+      const empty = document.createElement("div");
+      empty.textContent = "No buildings yet — buy one to place tiles!";
+      empty.style.opacity = 0.6;
+      empty.style.gridColumn = "1 / -1";
+      empty.style.textAlign = "center";
+      grid.appendChild(empty);
+    }
   }
 
   function renderAchievements() {
@@ -543,7 +568,7 @@ function devSelfTest() {
     $("totalText").textContent = fmt(state.totalEarned);
 
     $("cpsText").textContent = fmt(totalCps());
-    $("clickText").textContent = fmt(clickPower() * globalMult() * streakMult());
+    $("clickText").textContent = fmt(clickPower() * globalMult() * streakMult() * comboMult());
     $("critText").textContent = Math.round(critChance() * 100) + "%";
     $("critMultText").textContent = critMult().toFixed(1) + "x";
     $("multText").textContent = globalMult().toFixed(2) + "x";
@@ -553,6 +578,7 @@ function devSelfTest() {
   function renderAll() {
     renderUpgrades();
     renderBuildings();
+    renderCity();
     renderAchievements();
     renderPrestige();
     updateHUD();
@@ -565,8 +591,10 @@ function devSelfTest() {
     if (lvl >= def.max) return;
     const c = upgCost(key);
     if (state.coins < c) return toast("Not enough coins.");
+
     state.coins -= c;
     state.upgrades[key] = lvl + 1;
+
     save();
     renderAll();
     toast(`Bought ${def.name} (Lv ${state.upgrades[key]}).`);
@@ -577,26 +605,38 @@ function devSelfTest() {
     const def = BLD[key];
     const c = bldCost(key);
     if (state.coins < c) return toast("Not enough coins.");
+
     state.coins -= c;
     state.buildings[key] = (state.buildings[key] || 0) + 1;
+
     save();
     renderAll();
-    toast(`Built: ${def.name} (Owned ${state.buildings[key]}).`);
+    toast(`🏗️ ${def.name} added to the city!`);
     checkAchievements();
   }
 
-  // ---------- Earn click ----------
-  function earn() {
+  // ---------- Clicking / Earning ----------
+  function earnClick() {
     const now = Date.now();
+
+    // streak (2s window)
     if (now - (state.lastClickAt || 0) <= 2000) state.streak += 1;
     else state.streak = 0;
     state.lastClickAt = now;
 
-    let gained = clickPower() * globalMult() * streakMult();
+    let gained = clickPower() * globalMult() * streakMult() * comboMult();
 
+    // Crit
     if (Math.random() < critChance()) {
       gained *= critMult();
       toast(`CRIT! +${fmt(gained)} coins`);
+    }
+
+    // Mega Click (1% per level, cap 25%)
+    const megaChance = clamp(0.01 * (state.upgrades.megaClick || 0), 0, 0.25);
+    if (Math.random() < megaChance) {
+      gained *= 10;
+      toast(`💥 MEGA CLICK! +${fmt(gained)} coins`);
     }
 
     state.coins += gained;
@@ -607,7 +647,25 @@ function devSelfTest() {
     checkAchievements();
   }
 
-  // ---------- Export/Import/Reset ----------
+  // ---------- Golden chance (burst) ----------
+  function goldenBurstTick() {
+    // 0.5% per level each second
+    const lvl = state.upgrades.goldenChance || 0;
+    if (lvl <= 0) return;
+    const chance = clamp(0.005 * lvl, 0, 0.25);
+
+    if (Math.random() < chance) {
+      const bonus = totalCps() * 5; // 5 seconds worth of income
+      state.coins += bonus;
+      state.totalEarned += bonus;
+      toast(`✨ Golden bonus +${fmt(bonus)}`);
+      updateHUD();
+      save();
+      checkAchievements();
+    }
+  }
+
+  // ---------- Export / Import / Reset ----------
   function exportSave() {
     save();
     return localStorage.getItem(SAVE_KEY) || "";
@@ -624,8 +682,8 @@ function devSelfTest() {
     checkAchievements();
   }
 
-  function hardReset() {
-    if (!confirm("Reset all progress? This cannot be undone.")) return;
+  function hardResetAll() {
+    if (!confirm("Reset ALL progress? This cannot be undone.")) return;
     localStorage.removeItem(SAVE_KEY);
     state = {
       coins: 0,
@@ -633,6 +691,7 @@ function devSelfTest() {
       lastSave: Date.now(),
       streak: 0,
       lastClickAt: 0,
+      playTimeSeconds: 0,
       upgrades: Object.fromEntries(Object.keys(UPG).map(k => [k, 0])),
       buildings: Object.fromEntries(Object.keys(BLD).map(k => [k, 0])),
       prestigeCount: 0,
@@ -646,12 +705,77 @@ function devSelfTest() {
     toast("Reset complete.");
   }
 
+  // ---------- DEV / TEST HELPERS ----------
+  function devGiveCoins(amount = 1000) {
+    state.coins += amount;
+    state.totalEarned += amount;
+    updateHUD();
+    save();
+  }
+
+  function devMaxUpgrades() {
+    for (const k of Object.keys(UPG)) state.upgrades[k] = UPG[k].max;
+    renderAll();
+    save();
+  }
+
+  function devAddBuildings(count = 10) {
+    for (const k of Object.keys(BLD)) state.buildings[k] = (state.buildings[k] || 0) + count;
+    renderAll();
+    save();
+  }
+
+  function devGivePrestige(points = 10) {
+    state.prestigePoints += points;
+    renderAll();
+    save();
+  }
+
+  function devResetRunOnly() {
+    state.coins = 0;
+    state.streak = 0;
+    state.lastClickAt = 0;
+    for (const k of Object.keys(state.upgrades)) state.upgrades[k] = 0;
+    for (const k of Object.keys(state.buildings)) state.buildings[k] = 0;
+    renderAll();
+    save();
+  }
+
+  function devSelfTest() {
+    console.group("Flip City Dev Test");
+    try {
+      devGiveCoins(1_000_000);
+      console.log("✔ Coins add");
+
+      devMaxUpgrades();
+      console.log("✔ Upgrades max");
+
+      devAddBuildings(10);
+      console.log("✔ Buildings add");
+
+      devGivePrestige(25);
+      console.log("✔ Prestige add");
+
+      renderAll();
+      console.log("✔ Render All");
+
+      checkAchievements();
+      console.log("✔ Achievements check");
+
+      console.log("🎉 ALL TESTS PASSED");
+      toast("DEV TEST: ALL PASSED ✅");
+    } catch (e) {
+      console.error("❌ TEST FAILED", e);
+      toast("DEV TEST: FAILED ❌ (check console)");
+    }
+    console.groupEnd();
+  }
+
   // ---------- Wire buttons ----------
-  $("earnBtn").onclick = earn;
+  $("earnBtn").onclick = earnClick;
 
   $("saveBtn").onclick = () => { save(); toast("Saved."); };
-
-  $("resetBtn").onclick = hardReset;
+  $("resetBtn").onclick = hardResetAll;
 
   $("exportBtn").onclick = async () => {
     const raw = exportSave();
@@ -662,42 +786,24 @@ function devSelfTest() {
       alert("Copy this save:\n\n" + raw);
     }
   };
-  
-${DEV_MODE ? `
-<hr style="margin:18px auto; border-top:1px dashed rgba(255,255,255,.2)">
-<div style="text-align:center;">
-  <div style="font-weight:900; margin-bottom:6px;">🧪 DEV PANEL</div>
-  <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
-    <button id="dev1k">+1K</button>
-    <button id="dev1m">+1M</button>
-    <button id="devUpg">Max Upgrades</button>
-    <button id="devBld">+10 Buildings</button>
-    <button id="devPrest">+10 Prestige</button>
-    <button id="devReset">Reset Run</button>
-    <button id="devTest">Run Tests</button>
-  </div>
-</div>
-` : ""}
-  
-if (DEV_MODE) {
-  document.getElementById("dev1k").onclick = () => devGiveCoins(1_000);
-  document.getElementById("dev1m").onclick = () => devGiveCoins(1_000_000);
-  document.getElementById("devUpg").onclick = devMaxUpgrades;
-  document.getElementById("devBld").onclick = () => devBuyAllBuildings(10);
-  document.getElementById("devPrest").onclick = () => devGivePrestige(10);
-  document.getElementById("devReset").onclick = devResetRunOnly;
-  document.getElementById("devTest").onclick = devSelfTest;
-}
 
   $("importBtn").onclick = () => {
     const raw = prompt("Paste your exported save JSON here:");
     if (!raw) return;
-    try {
-      importSave(raw);
-    } catch {
-      toast("Import failed (invalid JSON).");
-    }
+    try { importSave(raw); }
+    catch { toast("Import failed (invalid JSON)."); }
   };
+
+  // Dev panel hooks
+  if (DEV_MODE) {
+    $("dev1k").onclick = () => devGiveCoins(1_000);
+    $("dev1m").onclick = () => devGiveCoins(1_000_000);
+    $("devUpg").onclick = devMaxUpgrades;
+    $("devBld").onclick = () => devAddBuildings(10);
+    $("devPrest").onclick = () => devGivePrestige(10);
+    $("devResetRun").onclick = devResetRunOnly;
+    $("devTest").onclick = devSelfTest;
+  }
 
   // ---------- Boot ----------
   load();
@@ -707,18 +813,22 @@ if (DEV_MODE) {
   checkAchievements();
   if (off.gained > 0) toast(`While away (${off.secondsAway}s): +${fmt(off.gained)} coins`);
 
-  // Auto earn tick
+  // Passive income + playtime tick (1 second)
   setInterval(() => {
+    state.playTimeSeconds += 1;
+
     const cps = totalCps();
     if (cps > 0) {
       state.coins += cps;
       state.totalEarned += cps;
-      updateHUD();
-      save();
-      checkAchievements();
     }
+
+    goldenBurstTick();
+    updateHUD();
+    save();
+    checkAchievements();
   }, 1000);
 
-  // Safety save
+  // backup save
   setInterval(save, 5000);
 });
