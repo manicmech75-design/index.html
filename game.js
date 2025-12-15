@@ -1,13 +1,12 @@
-// game.js
 document.addEventListener("DOMContentLoaded", () => {
   console.log("Game loaded");
 
   let coins = 0;
 
   const upgrades = {
-    clickPower: { level: 0, baseCost: 10, costMult: 1.6, addPerLevel: 1 },   // +1 per level
-    autoEarn:   { level: 0, baseCost: 25, costMult: 1.7, cpsPerLevel: 0.2 }, // +0.2 coins/sec
-    critChance: { level: 0, baseCost: 50, costMult: 1.8, addPerLevel: 0.02 } // +2% per level
+    clickPower: { level: 0, baseCost: 10, costMult: 1.6, addPerLevel: 1 },
+    autoEarn:   { level: 0, baseCost: 25, costMult: 1.7, cpsPerLevel: 0.2 },
+    critChance: { level: 0, baseCost: 50, costMult: 1.8, addPerLevel: 0.02 }
   };
 
   function upgradeCost(key) {
@@ -49,11 +48,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const game = document.getElementById("game");
   if (!game) {
-    console.error("Game container not found");
+    console.error("Game container not found (#game)");
     return;
   }
 
-  // Inject UI
   game.innerHTML = `
     <h2>🏙️ Flip City</h2>
     <p>Tap to earn coins</p>
@@ -61,23 +59,21 @@ document.addEventListener("DOMContentLoaded", () => {
     <button id="earn">Earn 💰</button>
     <p id="coins">Coins: 0</p>
 
-    <hr style="opacity:.2;margin:16px 0;">
+    <hr>
 
     <h3>Upgrades</h3>
-    <div style="display:grid; gap:10px; max-width: 360px; margin: 0 auto;">
+    <div style="display:grid; gap:10px; width:min(420px, 100%); margin: 0 auto;">
       <button id="buyClickPower"></button>
       <button id="buyAutoEarn"></button>
       <button id="buyCrit"></button>
     </div>
   `;
 
-  // Wire buttons
   document.getElementById("earn").onclick = earnClick;
   document.getElementById("buyClickPower").onclick = () => buyUpgrade("clickPower");
   document.getElementById("buyAutoEarn").onclick   = () => buyUpgrade("autoEarn");
   document.getElementById("buyCrit").onclick       = () => buyUpgrade("critChance");
 
-  // Auto earn loop
   setInterval(() => {
     const cps = upgrades.autoEarn.level * upgrades.autoEarn.cpsPerLevel;
     if (cps > 0) {
