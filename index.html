@@ -106,11 +106,9 @@
       font-size: 13px;
     }
 
-    .card-body {
-      padding: 16px;
-    }
+    .card-body { padding: 16px; }
 
-    /* Game container */
+    /* Game container where game.js injects UI */
     #game {
       min-height: 220px;
       display: grid;
@@ -118,7 +116,7 @@
       text-align: center;
     }
 
-    /* Buttons injected by game.js */
+    /* Default injected buttons (Earn + Upgrades) */
     #game button {
       margin-top: 12px;
       padding: 12px 18px;
@@ -130,10 +128,27 @@
       color: #07111f;
       font-weight: 700;
       box-shadow: 0 10px 22px rgba(46,168,255,0.25);
+      transition: transform 0.08s ease, filter 0.15s ease;
+      min-width: 280px;
+      max-width: 420px;
+      width: 100%;
     }
 
-    #game button:active {
-      transform: scale(0.98);
+    #game button:hover { filter: brightness(1.05); }
+    #game button:active { transform: scale(0.98); }
+
+    /* Make the Upgrade section look cleaner */
+    #game h3 {
+      margin: 18px 0 8px;
+    }
+
+    /* Optional: nicer divider */
+    #game hr {
+      width: 100%;
+      max-width: 520px;
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.12);
+      margin: 16px auto;
     }
 
     .ad-slot {
@@ -175,6 +190,7 @@
           <span class="muted" id="status">Loading…</span>
         </div>
         <div class="card-body">
+          <!-- game.js injects the UI here -->
           <div id="game">Loading game…</div>
         </div>
       </div>
@@ -187,8 +203,7 @@
         </div>
         <div class="card-body">
           <p class="muted" style="margin-top:0;">
-            If the game doesn’t show, it’s usually because
-            <b>game.js</b> isn’t in the same folder as <b>index.html</b>
+            If the game doesn’t show, it’s usually because <b>game.js</b> isn’t in the same folder as <b>index.html</b>
             or the script tag path is wrong.
           </p>
 
@@ -197,12 +212,10 @@
       </aside>
     </section>
 
-    <div class="footer">
-      © <span id="year"></span> Flip City
-    </div>
+    <div class="footer">© <span id="year"></span> Flip City</div>
   </main>
 
-  <!-- Game logic -->
+  <!-- Load game.js LAST so #game definitely exists -->
   <script src="./game.js"></script>
 
   <!-- Helpers -->
@@ -213,11 +226,8 @@
     const gameEl = document.getElementById("game");
 
     setTimeout(() => {
-      if (gameEl && gameEl.querySelector("button, h1, h2, p")) {
-        status.textContent = "Ready";
-      } else {
-        status.textContent = "Waiting for game.js";
-      }
+      if (gameEl && gameEl.querySelector("button, h1, h2, p")) status.textContent = "Ready";
+      else status.textContent = "Waiting for game.js";
     }, 300);
   </script>
 </body>
