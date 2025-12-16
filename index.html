@@ -137,8 +137,10 @@
     <div class="footer">© <span id="year"></span> Flip City</div>
   </main>
 
-<script defer src="./game.js?v=1000"></script>
-  
+  <div id="game"></div>
+
+  <script src="./game.js" defer></script>
+
   <script>
   document.getElementById("year").textContent = new Date().getFullYear();
   const status = document.getElementById("status");
@@ -148,7 +150,6 @@
       ? "Ready"
       : "Waiting for game.js";
   }, 500);
-
 
 <script>
   // Register SW (DISABLED while debugging)
