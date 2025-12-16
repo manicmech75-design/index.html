@@ -1,164 +1,66 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b1220" />
   <title>Flip City</title>
 
-  <!-- PWA -->
-  <link rel="manifest" href="./manifest.webmanifest">
-  <meta name="theme-color" content="#0b1220">
+  <!-- PWA (optional). Keep if you want offline/PWA -->
+  <link rel="manifest" href="./manifest.webmanifest" />
 
-  <!-- Icons (use ./ for GitHub Pages correctness) -->
-  <link rel="icon" href="./icons/icon-192.png">
-  <link rel="apple-touch-icon" href="./icons/icon-192.png">
-
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  
-<div id='game'></div>
-  
   <style>
-    * { box-sizing: border-box; }
+    *{box-sizing:border-box}
     body{
-      margin:0; min-height:100vh;
+      margin:0; min-height:100vh; display:grid; place-items:center;
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      background: radial-gradient(circle at top, #1a2a44, #0b1220);
-      color:#fff;
+      background:radial-gradient(circle at top,#1a2a44,#0b1220); color:#fff;
     }
-    header{
-      position:sticky; top:0; z-index:10;
-      background:rgba(11,18,32,.75);
-      backdrop-filter:blur(10px);
-      border-bottom:1px solid rgba(255,255,255,.08);
+    .wrap{
+      width:min(560px,92vw); padding:16px; border-radius:16px;
+      background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+      box-shadow:0 20px 60px rgba(0,0,0,.45);
     }
-    nav{
-      max-width:980px; margin:0 auto; padding:12px 16px;
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    h1{margin:0 0 10px; font-size:22px}
+    .sub{opacity:.75; margin:0 0 14px; font-size:13px}
+    .row{display:flex; gap:12px; flex-wrap:wrap; justify-content:space-between; margin:10px 0}
+    .pill{padding:8px 10px; border-radius:999px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); font-size:13px}
+    button{
+      width:100%; padding:14px; border-radius:12px; border:0; cursor:pointer;
+      font-size:16px; font-weight:800;
     }
-    .brand{ display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.3px; }
-    .pill{
-      font-size:12px; padding:4px 10px;
-      border:1px solid rgba(255,255,255,.16);
-      border-radius:999px; color:rgba(255,255,255,.85);
-    }
-    .wrap{ max-width:980px; margin:0 auto; padding:18px 16px 28px; display:grid; gap:16px; }
-    .grid{ display:grid; grid-template-columns:1fr; gap:16px; }
-    @media (min-width:860px){ .grid{ grid-template-columns:2fr 1fr; } }
-    .card{
-      background:rgba(18,28,47,.88);
-      border:1px solid rgba(255,255,255,.08);
-      border-radius:14px;
-      box-shadow:0 14px 40px rgba(0,0,0,.38);
-      overflow:hidden;
-    }
-    .card-header{
-      padding:14px 16px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      display:flex; align-items:baseline; justify-content:space-between; gap:10px;
-    }
-    .card-header h1,.card-header h2{ margin:0; font-size:16px; letter-spacing:.2px; }
-    .muted{ color:rgba(255,255,255,.7); font-size:13px; }
-    .card-body{ padding:16px; }
-
-    /* game container */
-    #game{ min-height:220px; }
-
-    /* global button look (game.js also injects buttons) */
-    #game button, .btn {
-      margin-top:12px;
-      padding:12px 18px;
-      font-size:16px;
-      border:none;
-      border-radius:10px;
-      cursor:pointer;
-      background:#2ea8ff;
-      color:#07111f;
-      font-weight:800;
-      box-shadow:0 10px 22px rgba(46,168,255,.25);
-      transition: transform .08s ease, filter .15s ease;
-    }
-    #game button:hover, .btn:hover{ filter:brightness(1.05); }
-    #game button:active, .btn:active{ transform:scale(.98); }
-
-    .ad-slot{
-      height:250px;
-      border-radius:12px;
-      border:1px dashed rgba(255,255,255,.18);
-      display:grid; place-items:center;
-      color:rgba(255,255,255,.65);
-      background:rgba(0,0,0,.12);
-    }
-    .footer{
-      text-align:center;
-      color:rgba(255,255,255,.55);
-      font-size:12px;
-      padding:8px 0 20px;
-    }
-    code{ background:rgba(255,255,255,.08); padding:2px 6px; border-radius:8px; }
+    #tapBtn{background:#ffd54a}
+    #upgradeBtn{margin-top:10px; background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.16)}
+    #msg{margin-top:12px; font-size:12px; opacity:.85; white-space:pre-wrap}
   </style>
 </head>
 
 <body>
-  <header>
-    <nav>
-      <div class="brand">
-        🏙️ Flip City
-        <span class="pill">PWA Ready</span>
-      </div>
-      <div class="muted">Tap • Earn • Upgrade</div>
-    </nav>
-  </header>
+  <div class="wrap">
+    <h1>Flip City</h1>
+    <p class="sub">Tap → Earn → Upgrade (minimal working build)</p>
 
-  <main class="wrap">
-    <section class="grid">
-      <div class="card">
-        <div class="card-header">
-          <h1>Game</h1>
-          <span class="muted" id="status">Loading…</span>
-        </div>
-        <div class="card-body">
-          <div id="game">Loading game…</div>
-        </div>
-      </div>
+    <div class="row">
+      <div class="pill">Cash: <b id="cash">0</b></div>
+      <div class="pill">Per Tap: <b id="perTap">1</b></div>
+      <div class="pill">Upgrade Cost: <b id="upgradeCost">10</b></div>
+    </div>
 
-      <aside class="card">
-        <div class="card-header">
-          <h2>Info</h2>
-          <span class="muted">Tips & Ads</span>
-        </div>
-        <div class="card-body">
-          <p class="muted" style="margin-top:0;">
-            Tip: if updates don’t appear, it’s usually PWA caching. Clear site data or bump the cache version in <code>sw.js</code>.
-          </p>
-          <div class="ad-slot">Ad slot (optional)</div>
-        </div>
-      </aside>
-    </section>
+    <button id="tapBtn">Tap to Earn</button>
+    <button id="upgradeBtn">Buy Upgrade (+1 per tap)</button>
 
-    <div class="footer">© <span id="year"></span> Flip City</div>
-  </main>
-
-  <div id="game"></div>
-
-  <script src="./game.js" defer></script>
+    <div id="msg">Loading game…</div>
+  </div>
 
   <script>
-  document.getElementById("year").textContent = new Date().getFullYear();
-  const status = document.getElementById("status");
+    // If game.js fails to load, show it clearly (no guessing)
+    window.addEventListener("error", (e) => {
+      const m = document.getElementById("msg");
+      if (m) m.textContent = "ERROR: game.js failed to load or crashed.\n\n" + (e.message || e.type);
+    });
+  </script>
 
-  setTimeout(() => {
-    status.textContent = document.getElementById("earnBtn")
-      ? "Ready"
-      : "Waiting for game.js";
-  }, 500);
-
-script>
-  // Register SW enable
-  // if ("serviceWorker" in navigator) {
-  //   navigator.serviceWorker.register("./sw.js").catch(() => {});
-  // }
-</script>
-   
+  <!-- IMPORTANT: cache-busting version. Increment v=2,3,4... every update -->
+  <script src="./game.js?v=1"></script>
 </body>
 </html>
