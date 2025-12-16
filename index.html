@@ -140,12 +140,15 @@
   <script src="./game.js?v=999"></script>
 
   <script>
-    document.getElementById("year").textContent = new Date().getFullYear();
-    const status = document.getElementById("status");
-    const gameEl = document.getElementById("game");
-    setTimeout(() => {
-      status.textContent = (gameEl && gameEl.querySelector("button, h1, h2, p, div")) ? "Ready" : "Waiting for game.js";
-    }, 300);
+  document.getElementById("year").textContent = new Date().getFullYear();
+  const status = document.getElementById("status");
+
+  setTimeout(() => {
+    status.textContent = document.getElementById("earnBtn")
+      ? "Ready"
+      : "Waiting for game.js";
+  }, 500);
+
 
     // Register SW (safe)
     if ("serviceWorker" in navigator) {
