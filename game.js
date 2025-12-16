@@ -1,3 +1,4 @@
+alert("game.js loaded");
 // game.js — Flip City (working starter)
 // Works on GitHub Pages. No external assets required.
 
