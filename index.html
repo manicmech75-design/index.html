@@ -15,7 +15,7 @@
       padding:24px;
     }
     .card{
-      width:min(520px, 96vw);
+      width:min(560px, 96vw);
       background: rgba(255,255,255,0.06);
       border: 1px solid rgba(255,255,255,0.10);
       border-radius:18px;
@@ -38,7 +38,8 @@
       border-radius:999px;
       padding:10px 12px;
       text-align:center;
-      font-weight:600;
+      font-weight:700;
+      font-size:14px;
     }
 
     .btn{
@@ -47,7 +48,7 @@
       border-radius:14px;
       padding:16px 14px;
       font-size:18px;
-      font-weight:800;
+      font-weight:900;
       cursor:pointer;
     }
     .btn.primary{ background:#f7c948; color:#0b1220; margin-bottom:10px; }
@@ -73,19 +74,24 @@
       text-align:center;
       cursor:pointer;
       transition: transform .04s ease;
+      min-height: 84px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
     }
     .tile:active{ transform: scale(0.98); }
-    .tile .tTitle{ font-weight:800; }
-    .tile .tSub{ opacity:.8; font-size:12px; margin-top:4px; }
+    .tile .tTitle{ font-weight:900; }
+    .tile .tSub{ opacity:.85; font-size:12px; margin-top:4px; line-height:1.2; }
 
-    #status{ margin-top:12px; opacity:.9; font-size:14px; }
-    .ok{ color:#44ff99; font-weight:800; }
+    #status{ margin-top:12px; opacity:.95; font-size:14px; }
+    .ok{ color:#44ff99; font-weight:900; }
   </style>
 </head>
+
 <body>
   <main class="card">
     <h1>Flip City</h1>
-    <div class="sub">Tap → Earn → Upgrade → Build tiles</div>
+    <div class="sub">Tap → Earn → Upgrade → Build tiles → Passive income</div>
 
     <div class="stats">
       <div class="pill">Cash: <span id="cash">0</span></div>
@@ -97,7 +103,7 @@
     <button class="btn secondary" id="upgradeBtn">Buy Upgrade (+1 per tap)</button>
 
     <section id="gridWrap">
-      <div style="font-weight:800; margin:8px 0;">City Tiles</div>
+      <div style="font-weight:900; margin:10px 0 8px;">City Tiles</div>
       <div id="cityGrid"></div>
     </section>
 
