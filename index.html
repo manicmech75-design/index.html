@@ -2,200 +2,179 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <title>Flip City</title>
 
-  <!-- PWA -->
-  <link rel="manifest" href="./manifest.json">
+  <!-- PWA (optional if you already have it) -->
+  <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#0b1220">
-  <link rel="icon" href="./icons/icon-192.png">
+  <link rel="icon" href="/icons/icon-192.png">
 
   <style>
     * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    body{
+      margin:0; min-height:100vh;
+      font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
       background: radial-gradient(circle at top, #1a2a44, #0b1220);
-      color: #fff;
-      display: flex;
-      justify-content: center;
-      padding: 18px 14px 40px;
+      color:#fff;
+      display:flex; justify-content:center;
+      padding:16px;
     }
-    .app {
-      width: min(560px, 100%);
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.10);
+    .wrap{ width:min(720px, 100%); }
+    h1{ margin:6px 0 0; font-size:44px; letter-spacing:.5px; }
+    .sub{ margin:6px 0 14px; opacity:.85; }
+
+    .panel{
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08);
       border-radius: 18px;
-      padding: 18px;
-      box-shadow: 0 14px 50px rgba(0,0,0,0.35);
+      padding: 16px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.25);
     }
-    h1 {
-      margin: 0 0 4px;
-      font-size: 34px;
-      letter-spacing: 0.2px;
-    }
-    .sub {
-      margin: 0 0 14px;
-      opacity: 0.85;
-    }
-    .stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
+
+    .stats{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
       margin: 12px 0 14px;
     }
-    .pill {
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.10);
-      border-radius: 14px;
-      padding: 10px 12px;
-      text-align: center;
+    .stat{
+      padding: 14px 12px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08);
+      text-align:center;
     }
-    .pill .label { opacity: 0.8; font-size: 12px; }
-    .pill .value { font-size: 20px; font-weight: 700; margin-top: 3px; }
+    .stat .label{ opacity:.85; font-size:13px; }
+    .stat .value{ margin-top:6px; font-size:34px; font-weight:800; }
 
-    .btn {
-      width: 100%;
-      border: 0;
-      border-radius: 14px;
-      padding: 14px 14px;
-      font-size: 18px;
+    .btn{
+      width:100%;
+      border:none;
+      border-radius:16px;
+      padding: 16px 14px;
+      font-size: 20px;
       font-weight: 800;
-      cursor: pointer;
-      margin: 10px 0;
-      transition: transform 0.05s ease;
+      cursor:pointer;
+      transition: transform .05s ease, filter .15s ease, opacity .15s ease;
     }
-    .btn:active { transform: scale(0.99); }
-    .btn.primary { background: #f0c84b; color: #1b1b1b; }
-    .btn.secondary {
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.12);
-      color: #fff;
-    }
-    .btn.secondary:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-
-    .row {
-      display: flex;
-      gap: 10px;
+    .btn:active{ transform: scale(.99); }
+    .btn.primary{ background:#f2ce4c; color:#121212; }
+    .btn.secondary{
+      background: rgba(255,255,255,.08);
+      color:#fff;
+      border: 1px solid rgba(255,255,255,.10);
       margin-top: 10px;
-      flex-wrap: wrap;
     }
-    .chip {
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.12);
+    .btn:disabled{ opacity:.45; cursor:not-allowed; }
+
+    .row{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .pill{
+      padding: 12px 14px;
       border-radius: 999px;
-      padding: 8px 10px;
-      font-size: 13px;
-      opacity: 0.92;
-      flex: 1 1 auto;
-      text-align: center;
-      min-width: 140px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08);
+      text-align:center;
+      font-weight:700;
     }
 
-    h2 {
-      margin: 16px 0 10px;
-      font-size: 18px;
-      opacity: 0.95;
-    }
-
-    .grid {
-      display: grid;
+    h2{ margin: 18px 0 10px; font-size: 28px; }
+    .tiles{
+      display:grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
+      gap: 12px;
     }
-    .tile {
-      aspect-ratio: 3/4;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 14px;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      cursor: pointer;
-      user-select: none;
+    @media (max-width: 520px){
+      .tiles{ grid-template-columns: repeat(3, 1fr); }
+      h1{ font-size: 40px; }
     }
-    .tile:hover { border-color: rgba(255,255,255,0.20); }
-    .tile .name { font-weight: 900; font-size: 18px; margin-bottom: 6px; }
-    .tile .desc { opacity: 0.86; font-size: 13px; line-height: 1.2; }
+    .tile{
+      border-radius: 18px;
+      padding: 18px 10px;
+      min-height: 96px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      font-weight:900;
+      line-height:1.1;
+      cursor:pointer;
+      user-select:none;
+    }
+    .tile small{ display:block; opacity:.85; font-weight:800; margin-top: 8px; }
+    .tile.empty{ opacity:.92; }
+    .tile.house{ background: rgba(46, 204, 113, .12); border-color: rgba(46, 204, 113, .25); }
+    .tile.locked{ opacity:.45; cursor:not-allowed; }
 
-    .footer {
+    .footer{
       margin-top: 14px;
-      padding-top: 10px;
-      border-top: 1px solid rgba(255,255,255,0.10);
-      display: flex;
-      justify-content: space-between;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
       gap: 10px;
-      flex-wrap: wrap;
-      opacity: 0.92;
-      font-size: 13px;
+      opacity:.9;
     }
-    .ok { color: #5dff9a; font-weight: 800; }
-    .warn { color: #ffde7a; font-weight: 800; }
-    .tinybtn {
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.12);
-      color: #fff;
-      border-radius: 12px;
-      padding: 10px 12px;
-      cursor: pointer;
-      font-weight: 800;
-    }
-
-    @media (max-width: 420px) {
-      .grid { grid-template-columns: repeat(2, 1fr); }
-      .stats { grid-template-columns: 1fr; }
+    .tinybtn{
+      border:none;
+      border-radius: 14px;
+      padding: 12px 14px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.10);
+      color:#fff;
+      font-weight:800;
+      cursor:pointer;
     }
   </style>
 </head>
-
 <body>
-  <div class="app">
-    <h1>Flip City</h1>
-    <p class="sub">Tap → Earn → Upgrade → Build tiles</p>
+  <div class="wrap">
+    <div class="panel">
+      <h1>Flip City</h1>
+      <div class="sub">Tap → Earn → Upgrade → Build tiles</div>
 
-    <div class="stats">
-      <div class="pill">
-        <div class="label">Cash</div>
-        <div class="value" id="cash">0</div>
+      <div class="stats">
+        <div class="stat">
+          <div class="label">Cash</div>
+          <div id="cash" class="value">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">Per Tap</div>
+          <div id="perTap" class="value">1</div>
+        </div>
+        <div class="stat">
+          <div class="label">Upgrade Cost</div>
+          <div id="upgradeCost" class="value">10</div>
+        </div>
       </div>
-      <div class="pill">
-        <div class="label">Per Tap</div>
-        <div class="value" id="perTap">1</div>
+
+      <button id="tapBtn" class="btn primary">Tap to Earn</button>
+      <button id="upgradeBtn" class="btn secondary">Buy Upgrade (+1 per tap)</button>
+
+      <div class="row">
+        <div class="pill">Passive: <span id="passiveRate">0</span>/sec</div>
+        <div class="pill">Offline: +<span id="offlineEarned">0</span></div>
       </div>
-      <div class="pill">
-        <div class="label">Upgrade Cost</div>
-        <div class="value" id="upgradeCost">10</div>
-      </div>
-    </div>
 
-    <button class="btn primary" id="tapBtn">Tap to Earn</button>
-    <button class="btn secondary" id="upgradeBtn">Buy Upgrade (+1 per tap)</button>
+      <div class="pill" style="margin-top:12px;">Buildings: <span id="buildingsCount">0</span></div>
 
-    <div class="row">
-      <div class="chip" id="passive">Passive: 0/sec</div>
-      <div class="chip" id="offline">Offline: +0</div>
-      <div class="chip" id="tilesOwned">Buildings: 0</div>
-    </div>
+      <h2>City Tiles</h2>
+      <div id="tiles" class="tiles"></div>
 
-    <h2>City Tiles</h2>
-    <div class="grid" id="tileGrid"></div>
-
-    <div class="footer">
-      <div id="status">Game loaded <span class="ok">✅</span></div>
-      <div>
-        <button class="tinybtn" id="resetBtn">Reset Save</button>
+      <div class="footer">
+        <div id="status">Loading…</div>
+        <button id="resetBtn" class="tinybtn">Reset Save</button>
       </div>
     </div>
   </div>
 
-  <script src="./game.js"></script>
+  <script src="game.js"></script>
 </body>
 </html>
