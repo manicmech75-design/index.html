@@ -67,7 +67,6 @@
       box-shadow: 0 0 0 1px rgba(255,255,255,.02), 0 18px 60px var(--glow);
     }
 
-    /* --- Banner Ad Slot --- */
     .adSlot {
       margin-top: 12px;
       border-radius: 14px;
@@ -261,6 +260,33 @@
       border: 1px solid rgba(255,255,255,.08);
     }
 
+    /* Achievements */
+    .achList { margin-top: 10px; display: grid; gap: 10px; }
+    .achItem {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(0,0,0,.18);
+      border: 1px solid rgba(255,255,255,.10);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap: 10px;
+      font-weight: 900;
+    }
+    .achItem .left { display:flex; flex-direction:column; gap:2px; }
+    .achItem small { font-weight: 800; opacity:.85; color: var(--muted); }
+    .badge {
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.10);
+    }
+    .badge.done {
+      background: rgba(0,255,160,.18);
+      border-color: rgba(0,255,160,.35);
+    }
+
     /* Offline modal */
     .modalBackdrop {
       position: fixed; inset: 0;
@@ -326,13 +352,11 @@
           </div>
         </div>
 
-        <!-- Boost status -->
         <div class="boostBar" id="boostBar" style="display:none;">
           <div>Boost Active</div>
           <div class="pill" id="boostPill">2x • 00:00</div>
         </div>
 
-        <!-- Banner Ad Slot -->
         <div class="adSlot" id="bannerSlot">
           Banner Ad Slot
           <small>(Drop your AdSense unit here later)</small>
@@ -368,13 +392,16 @@
           <button class="shopBtn" id="buyTileUp">Buy</button>
         </div>
 
-        <h2 style="margin:16px 0 10px;">Reward</h2>
+        <h2 style="margin:16px 0 10px;">Daily Streak</h2>
         <div class="shopItem">
-          <h3>Watch Ad → 2x Boost</h3>
-          <p>Get 2x earnings for 60 seconds.</p>
-          <div class="price" id="rewardStatus">Ready</div>
-          <button class="shopBtn" id="rewardBtn">Get Boost</button>
+          <h3 id="streakTitle">Day 1 Reward</h3>
+          <p id="streakDesc">Claim your daily bonus to keep your streak.</p>
+          <div class="price" id="streakStatus">Ready</div>
+          <button class="shopBtn" id="claimDailyBtn">Claim</button>
         </div>
+
+        <h2 style="margin:16px 0 10px;">Achievements</h2>
+        <div class="achList" id="achList"></div>
 
         <h2 style="margin:16px 0 10px;">Skins</h2>
         <div class="selectRow">
