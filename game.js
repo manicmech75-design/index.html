@@ -143,8 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       });
     });
-  }
-      
+  }      
 </script>
 
     // Not a match: show briefly, then flip back
