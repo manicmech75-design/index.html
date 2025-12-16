@@ -129,6 +129,23 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       return;
     }
+      
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js").then((reg) => {
+      reg.addEventListener("updatefound", () => {
+        const sw = reg.installing;
+        sw && sw.addEventListener("statechange", () => {
+          if (sw.state === "installed" && navigator.serviceWorker.controller) {
+            // New SW installed, refresh to get newest files
+            location.reload();
+          }
+        });
+      });
+    });
+  }
+      
+</script>
 
     // Not a match: show briefly, then flip back
     lock = true;
