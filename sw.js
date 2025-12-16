@@ -7,12 +7,20 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil((async () => {
-    const keys = await caches.keys();
-    await Promise.all(keys.map((k) => (CACHE_ALLOWLIST.has(k) ? null : caches.delete(k))));
-    await self.clients.claim();
-  })());
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+
+  // Let the browser/network handle JS/CSS/images so they don't get an HTML fallback
+  if (req.destination === "script" || req.destination === "style" || req.destination === "image") {
+    return;
+  }
+
+  // Only handle page navigations (index/offline page)
+  if (req.mode === "navigate") {
+    event.respondWith(
+      fetch(req).catch(() => caches.match("./offline.html"))
+    );
+  }
 });
 
 // IMPORTANT: do NOT cache HTML or JS while you're debugging.
