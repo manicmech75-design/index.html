@@ -1,155 +1,71 @@
-alert("game.js loaded");
-// game.js — Flip City (working starter)
-// Works on GitHub Pages. No external assets required.
+(() => {
+  const $ = (id) => document.getElementById(id);
 
-document.addEventListener("DOMContentLoaded", () => {
-  const root = document.getElementById("game");
-  if (!root) {
-    console.error("❌ #game not found. Add <div id='game'></div> to index.html");
+  const elCash = $("cash");
+  const elPerTap = $("perTap");
+  const elUpgradeCost = $("upgradeCost");
+  const tapBtn = $("tapBtn");
+  const upgradeBtn = $("upgradeBtn");
+  const msg = $("msg");
+
+  // Hard fail if HTML IDs don't match
+  const required = [elCash, elPerTap, elUpgradeCost, tapBtn, upgradeBtn, msg];
+  if (required.some((x) => !x)) {
+    document.body.innerHTML =
+      "<pre style='color:#fff;padding:16px;'>ERROR: Missing required HTML elements. Make sure index.html uses ids: cash, perTap, upgradeCost, tapBtn, upgradeBtn, msg.</pre>";
     return;
   }
 
-  // Inject minimal styles (so you don't depend on a separate CSS file)
-  const style = document.createElement("style");
-  style.textContent = `
-    :root { color-scheme: dark; }
-    body { margin: 0; font-family: system-ui, Arial, sans-serif; background:#0b1220; color:#e8eefc; }
-    .wrap { max-width: 980px; margin: 0 auto; padding: 20px; }
-    .top { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
-    h1 { font-size: 22px; margin: 0; }
-    .pill { padding: 8px 12px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); border-radius: 999px; }
-    button {
-      cursor:pointer; border: 1px solid rgba(255,255,255,.18);
-      background: rgba(255,255,255,.10); color:#e8eefc;
-      padding:10px 14px; border-radius:12px; font-weight:600;
-    }
-    button:hover { background: rgba(255,255,255,.14); }
-    .grid {
-      margin-top: 16px;
-      display:grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-    }
-    @media (max-width: 520px) {
-      .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    }
-    .card {
-      aspect-ratio: 1 / 1;
-      border-radius: 16px;
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.12);
-      display:flex; align-items:center; justify-content:center;
-      font-size: 28px; user-select:none;
-      transition: transform .12s ease;
-    }
-    .card:active { transform: scale(0.98); }
-    .card.hidden { color: transparent; }
-    .card.matched { background: rgba(46, 204, 113, .18); border-color: rgba(46, 204, 113, .35); }
-    .hint { opacity:.85; margin-top:10px; }
-  `;
-  document.head.appendChild(style);
+  const SAVE_KEY = "flip_city_save_v1";
 
-  // Simple emoji deck (8 pairs = 16 cards)
-  const symbols = ["🍕","🚗","🧠","🎮","🏙️","⚡","🧩","🪙"];
-  const deck = shuffle([...symbols, ...symbols]).map((sym, i) => ({
-    id: i,
-    sym,
-    flipped: false,
-    matched: false,
-  }));
+  const state = {
+    cash: 0,
+    perTap: 1,
+    upgradeCost: 10,
+  };
 
-  let first = null;
-  let lock = false;
-  let moves = 0;
-  let matches = 0;
+  function render(note = "") {
+    elCash.textContent = Math.floor(state.cash).toString();
+    elPerTap.textContent = state.perTap.toString();
+    elUpgradeCost.textContent = state.upgradeCost.toString();
+    msg.textContent = note || "Game loaded ✅ Tap to earn.";
+  }
 
-  root.innerHTML = `
-    <div class="wrap">
-      <div class="top">
-        <h1>Flip City</h1>
-        <div class="pill" id="stats">Moves: 0 • Matched: 0/8</div>
-        <button id="resetBtn">Reset</button>
-      </div>
-      <div class="grid" id="grid"></div>
-      <div class="hint">Tip: If you updated files and nothing changes, your Service Worker is probably caching the old version.</div>
-    </div>
-  `;
+  function save() {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  }
 
-  const gridEl = document.getElementById("grid");
-  const statsEl = document.getElementById("stats");
-  const resetBtn = document.getElementById("resetBtn");
-
-  resetBtn.addEventListener("click", () => location.reload());
-
-  render();
-
-  function render() {
-    statsEl.textContent = `Moves: ${moves} • Matched: ${matches}/8`;
-    gridEl.innerHTML = "";
-
-    for (const c of deck) {
-      const btn = document.createElement("button");
-      btn.className = "card";
-      btn.type = "button";
-      btn.setAttribute("aria-label", "card");
-      btn.textContent = c.sym;
-
-      if (!c.flipped && !c.matched) btn.classList.add("hidden");
-      if (c.matched) btn.classList.add("matched");
-
-      btn.addEventListener("click", () => onPick(c.id));
-      gridEl.appendChild(btn);
+  function load() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (typeof data.cash === "number") state.cash = data.cash;
+      if (typeof data.perTap === "number") state.perTap = data.perTap;
+      if (typeof data.upgradeCost === "number") state.upgradeCost = data.upgradeCost;
+    } catch {
+      // ignore corrupted saves
     }
   }
 
-  function onPick(id) {
-    if (lock) return;
-    const card = deck.find(c => c.id === id);
-    if (!card || card.matched || card.flipped) return;
-
-    card.flipped = true;
-
-    if (!first) {
-      first = card;
-      render();
-      return;
-    }
-
-    moves += 1;
-    const second = card;
-
-    if (first.sym === second.sym) {
-      first.matched = true;
-      second.matched = true;
-      matches += 1;
-      first = null;
-      render();
-
-      if (matches === symbols.length) {
-        setTimeout(() => alert(`✅ You win! Moves: ${moves}`), 100);
-      }
-      return;
-    }
-
-    // Not a match: show briefly, then flip back
-    lock = true;
+  tapBtn.addEventListener("click", () => {
+    state.cash += state.perTap;
     render();
-    setTimeout(() => {
-      first.flipped = false;
-      second.flipped = false;
-      first = null;
-      lock = false;
-      render();
-    }, 650);
-  }
+    save();
+  });
 
-  function shuffle(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
+  upgradeBtn.addEventListener("click", () => {
+    if (state.cash < state.upgradeCost) {
+      render(`Need ${state.upgradeCost - Math.floor(state.cash)} more cash.`);
+      return;
     }
-    return arr;
-  }
+    state.cash -= state.upgradeCost;
+    state.perTap += 1;
+    state.upgradeCost = Math.floor(state.upgradeCost * 1.35 + 1);
+    render("Upgrade purchased ✅");
+    save();
+  });
 
-  console.log("✅ Flip City loaded");
-});
+  load();
+  render();
+})();
