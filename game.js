@@ -1,49 +1,68 @@
-// Flip City — v3 (5 upgrades + tile visuals + skyline + stages + events)
+// Flip City — Builder Edition (v4)
+// Real builder feel: place buildings on a grid, adjacency bonuses, 5 upgrades, intro + instructions.
 // No external assets. GitHub Pages safe.
 
 document.addEventListener("DOMContentLoaded", () => {
   const root = document.getElementById("game");
-  if (!root) return console.error("❌ Missing <div id='game'></div>");
+  if (!root) return console.error("❌ Missing <div id='game'></div> in index.html");
 
-  // ---------- Styles ----------
+  // -------------------- Styles --------------------
   const style = document.createElement("style");
   style.textContent = `
     :root { color-scheme: dark; }
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#eaf0ff; min-height:100vh; }
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 18px; }
-    .top { display:flex; gap:12px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; }
-    h1 { margin:0; font-size: 20px; }
-    .sub { opacity:.82; font-size: 13px; }
-    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:stretch; }
-    .card {
+    body{
+      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:#eaf0ff; min-height:100vh;
+      background:
+        radial-gradient(900px 450px at 35% 10%, rgba(94,203,255,.16), transparent 55%),
+        radial-gradient(900px 450px at 70% 18%, rgba(186,94,255,.12), transparent 55%),
+        linear-gradient(180deg, #060716, #0b1220 55%, #05060f);
+    }
+
+    .wrap{ max-width: 1180px; margin: 0 auto; padding: 18px; }
+    .top{ display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start; }
+    h1{ margin:0; font-size: 20px; letter-spacing:.2px; }
+    .sub{ opacity:.82; font-size: 13px; }
+
+    .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:stretch; }
+    .grid2{
+      display:grid; gap: 12px;
+      grid-template-columns: 1.05fr 1.95fr;
+      align-items:start;
+    }
+    @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
+
+    .card{
       background: rgba(255,255,255,.06);
       border: 1px solid rgba(255,255,255,.12);
-      border-radius: 16px;
+      border-radius: 18px;
       padding: 14px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      box-shadow: 0 12px 35px rgba(0,0,0,.35);
+      backdrop-filter: blur(6px);
     }
-    .card h2 { margin:0 0 10px 0; font-size: 14px; opacity:.92; letter-spacing:.2px; }
-    .btn {
+    .card h2{ margin:0 0 10px 0; font-size: 14px; opacity:.92; letter-spacing:.2px; }
+    .hr{ height:1px; background: rgba(255,255,255,.10); border-radius:99px; margin: 12px 0; }
+
+    .btn{
       appearance:none; border:0; cursor:pointer;
       background: rgba(255,255,255,.10);
       color:#eaf0ff;
       border:1px solid rgba(255,255,255,.16);
       border-radius: 14px;
       padding: 10px 12px;
-      font-weight: 750;
-      transition: transform .05s ease, background .15s ease, opacity .15s ease;
+      font-weight: 800;
+      transition: transform .06s ease, background .15s ease, opacity .15s ease;
       user-select:none;
       white-space: nowrap;
     }
-    .btn:hover { background: rgba(255,255,255,.14); }
-    .btn:active { transform: translateY(1px) scale(.99); }
-    .btn.primary { background: rgba(94, 203, 255, .18); border-color: rgba(94, 203, 255, .35); }
-    .btn.danger { background: rgba(255, 94, 94, .14); border-color: rgba(255, 94, 94, .35); }
-    .btn.small { padding: 8px 10px; border-radius: 12px; font-weight: 750; }
+    .btn:hover{ background: rgba(255,255,255,.14); }
+    .btn:active{ transform: translateY(1px) scale(.99); }
+    .btn.primary{ background: rgba(94,203,255,.18); border-color: rgba(94,203,255,.35); }
+    .btn.danger{ background: rgba(255,94,94,.14); border-color: rgba(255,94,94,.35); }
+    .btn.small{ padding: 8px 10px; border-radius: 12px; font-weight: 800; }
+    .btn.ghost{ background: rgba(255,255,255,.06); }
 
-    .hr { height:1px; background: rgba(255,255,255,.10); border-radius:99px; margin:12px 0; }
-
-    .pill {
+    .pill{
       display:inline-flex; align-items:center; gap:8px;
       padding: 7px 10px;
       border-radius: 999px;
@@ -53,74 +72,106 @@ document.addEventListener("DOMContentLoaded", () => {
       opacity: .95;
     }
 
-    .grid {
-      display:grid;
-      grid-template-columns: 1.2fr 2fr;
-      gap: 12px;
-    }
-    @media (max-width: 920px) { .grid { grid-template-columns: 1fr; } }
+    .statsGrid{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+    .stat{ background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10); border-radius: 14px; padding: 10px; }
+    .k{ font-size: 12px; opacity:.78; }
+    .v{ margin-top: 4px; font-size: 16px; font-weight: 900; }
 
-    .statsGrid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
-    .stat { background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10); border-radius: 14px; padding: 10px; }
-    .k { font-size: 12px; opacity:.78; }
-    .v { margin-top: 4px; font-size: 16px; font-weight: 800; }
+    .shop{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+    @media (max-width: 560px){ .shop{ grid-template-columns: 1fr; } }
+    .shopItem{ background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius: 16px; padding: 12px; display:flex; flex-direction:column; gap: 8px; }
+    .shopItem .t{ font-weight: 900; }
+    .shopItem .d{ font-size: 12px; opacity:.82; }
+    .shopItem .b{ display:flex; justify-content:space-between; align-items:center; gap: 10px; }
+    .shopItem .meta{ font-size: 12px; opacity:.86; }
 
-    .shop { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
-    @media (max-width: 560px) { .shop { grid-template-columns: 1fr; } }
-
-    .shopItem { background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius: 16px; padding: 12px; display:flex; flex-direction:column; gap: 8px; }
-    .shopItem .t { font-weight: 850; }
-    .shopItem .d { font-size: 12px; opacity:.8; }
-    .shopItem .b { display:flex; justify-content:space-between; align-items:center; gap: 10px; }
-    .shopItem .meta { font-size: 12px; opacity:.85; }
-
-    .skyBox {
-      border-radius: 18px;
-      padding: 14px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
-      overflow:hidden;
-    }
-    .skyline {
-      font-size: 34px;
-      line-height: 1.15;
-      letter-spacing: 2px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      filter: drop-shadow(0 10px 20px rgba(0,0,0,.35));
-    }
-
-    .tilesWrap { display:flex; flex-direction:column; gap: 10px; }
-    .tiles {
-      display:grid;
-      grid-template-columns: repeat(6, minmax(0,1fr));
-      gap: 10px;
-    }
-    @media (max-width: 900px) { .tiles { grid-template-columns: repeat(4, minmax(0,1fr)); } }
-    @media (max-width: 520px) { .tiles { grid-template-columns: repeat(3, minmax(0,1fr)); } }
-
-    .tile {
+    .buildBar{
+      display:flex; gap: 8px; flex-wrap:wrap; align-items:center;
+      background: rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.10);
       border-radius: 16px;
+      padding: 10px;
+    }
+    .tool{
+      display:flex; gap: 10px; align-items:center;
+      padding: 10px 12px;
+      border-radius: 14px;
       border: 1px solid rgba(255,255,255,.14);
       background: rgba(255,255,255,.06);
-      padding: 12px 10px;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      gap: 6px;
-      cursor:pointer;
-      user-select:none;
-      min-height: 86px;
-      transition: transform .06s ease, background .15s ease;
+      cursor:pointer; user-select:none;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease;
+      min-width: 170px;
     }
-    .tile:hover { background: rgba(255,255,255,.09); }
-    .tile:active { transform: translateY(1px) scale(.99); }
-    .tile .icon { font-size: 30px; }
-    .tile .lvl { font-size: 12px; opacity:.82; }
+    .tool:hover{ background: rgba(255,255,255,.09); }
+    .tool:active{ transform: translateY(1px) scale(.99); }
+    .tool.sel{
+      background: rgba(94,203,255,.15);
+      border-color: rgba(94,203,255,.35);
+      box-shadow: 0 0 0 3px rgba(94,203,255,.10);
+    }
+    .tool .icon{ font-size: 18px; }
+    .tool .name{ font-weight: 900; }
+    .tool .info{ font-size: 12px; opacity: .82; }
 
-    .toast {
+    .cityWrap{ display:flex; flex-direction:column; gap: 10px; }
+    .sky{
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      padding: 12px;
+      overflow:hidden;
+    }
+    .skyline{ font-size: 30px; line-height: 1.1; letter-spacing: 2px; white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
+    .hint{ font-size: 12px; opacity:.78; margin-top: 6px; }
+
+    .board{
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      padding: 12px;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(10, minmax(0,1fr));
+      gap: 8px;
+    }
+    @media (max-width: 820px){ .grid{ grid-template-columns: repeat(8, minmax(0,1fr)); } }
+    @media (max-width: 520px){ .grid{ grid-template-columns: repeat(6, minmax(0,1fr)); } }
+
+    .tile{
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      min-height: 56px;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      cursor:pointer; user-select:none;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease;
+      position: relative;
+      overflow:hidden;
+    }
+    .tile:hover{ background: rgba(255,255,255,.09); }
+    .tile:active{ transform: translateY(1px) scale(.99); }
+    .tile .e{ font-size: 22px; }
+    .tile .s{ font-size: 10px; opacity:.78; margin-top: 2px; }
+
+    .tile.flash::after{
+      content:"";
+      position:absolute; inset:-2px;
+      background: radial-gradient(250px 140px at 50% 50%, rgba(94,203,255,.30), transparent 60%);
+      opacity:.0;
+      animation: flash .4s ease;
+    }
+    @keyframes flash { 0%{opacity:0} 25%{opacity:1} 100%{opacity:0} }
+
+    .tile.bad{
+      border-color: rgba(255,94,94,.45);
+      box-shadow: 0 0 0 3px rgba(255,94,94,.10);
+    }
+
+    .panelSmall{ font-size: 12px; opacity:.85; line-height: 1.35; }
+    .mono{ font-variant-numeric: tabular-nums; }
+
+    .toast{
       position: fixed;
       left: 50%;
       transform: translateX(-50%);
@@ -137,16 +188,65 @@ document.addEventListener("DOMContentLoaded", () => {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      z-index: 50;
     }
-    .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+    .toast.show{ opacity: 1; transform: translateX(-50%) translateY(-4px); }
+
+    /* Modal */
+    .modalBackdrop{
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.55);
+      display:flex; align-items:center; justify-content:center;
+      padding: 18px;
+      z-index: 100;
+    }
+    .modal{
+      width: min(860px, 96vw);
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.16);
+      background:
+        radial-gradient(900px 450px at 25% 0%, rgba(94,203,255,.18), transparent 55%),
+        radial-gradient(900px 450px at 75% 10%, rgba(186,94,255,.14), transparent 55%),
+        rgba(11,18,32,.95);
+      box-shadow: 0 25px 70px rgba(0,0,0,.55);
+      overflow:hidden;
+    }
+    .modalHeader{
+      padding: 16px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      display:flex; align-items:flex-start; justify-content:space-between; gap: 12px;
+    }
+    .modalHeader h3{ margin:0; font-size: 16px; letter-spacing:.2px; }
+    .modalBody{ padding: 16px; }
+    .modalGrid{
+      display:grid; gap: 12px;
+      grid-template-columns: 1.2fr .8fr;
+    }
+    @media (max-width: 820px){ .modalGrid{ grid-template-columns: 1fr; } }
+    .step{
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 16px;
+      padding: 12px;
+    }
+    .step .title{ font-weight: 950; margin-bottom: 6px; }
+    .step .text{ font-size: 12px; opacity:.86; line-height: 1.4; }
+    .modalFooter{
+      padding: 16px;
+      border-top: 1px solid rgba(255,255,255,.10);
+      display:flex; align-items:center; justify-content:space-between; gap: 10px;
+      flex-wrap:wrap;
+    }
+
+    a { color: inherit; }
   `;
   document.head.appendChild(style);
 
-  // ---------- Helpers ----------
-  const SAVE_KEY = "flipcity_v3_save";
+  // -------------------- Helpers --------------------
   const now = () => Date.now();
+  const SAVE_KEY = "flipcity_builder_v4";
 
-  function fmt(n) {
+  const fmt = (n) => {
     if (!Number.isFinite(n)) return "∞";
     const abs = Math.abs(n);
     if (abs < 1000) return n.toFixed(0);
@@ -155,141 +255,217 @@ document.addEventListener("DOMContentLoaded", () => {
     while (v >= 1000 && u < units.length - 1) { v /= 1000; u++; }
     const sign = n < 0 ? "-" : "";
     return `${sign}${v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2)}${units[u]}`;
-  }
+  };
 
-  function toast(msg) {
+  const toast = (msg) => {
     const el = document.getElementById("toast");
     if (!el) return;
     el.textContent = msg;
     el.classList.add("show");
     clearTimeout(toast._t);
     toast._t = setTimeout(() => el.classList.remove("show"), 1400);
-  }
-
-  function safeParse(s, fallback) {
-    try { return JSON.parse(s); } catch { return fallback; }
-  }
-
-  // ---------- Visual building levels ----------
-  const BUILDING = ["⬜", "🏠", "🏢", "🏬", "🏙️", "🌆"]; // 0..5
-  const MAX_LVL = BUILDING.length - 1;
-
-  // ---------- City stages (by City Dev) ----------
-  const STAGES = [
-    { name: "Campsite", req: 0,   bg: "night" },
-    { name: "Hamlet",   req: 6,   bg: "dawn" },
-    { name: "Village",  req: 16,  bg: "morning" },
-    { name: "Town",     req: 32,  bg: "day" },
-    { name: "City",     req: 60,  bg: "sunset" },
-    { name: "Metro",    req: 110, bg: "neon" },
-  ];
-  const BGS = {
-    night:   "radial-gradient(1200px 500px at 20% 10%, rgba(94,203,255,.20), transparent 55%), linear-gradient(180deg, #081022, #070b14 60%, #05070d)",
-    dawn:    "radial-gradient(900px 450px at 30% 20%, rgba(255,206,94,.24), transparent 55%), linear-gradient(180deg, #0a1230, #0b1220 60%, #070b12)",
-    morning: "radial-gradient(900px 450px at 30% 10%, rgba(94,203,255,.22), transparent 55%), linear-gradient(180deg, #0b1733, #0b1220 60%, #070b12)",
-    day:     "radial-gradient(900px 450px at 40% 10%, rgba(124,255,170,.16), transparent 55%), linear-gradient(180deg, #0b1730, #0b1220 60%, #070b12)",
-    sunset:  "radial-gradient(900px 450px at 40% 12%, rgba(255,94,94,.20), transparent 55%), linear-gradient(180deg, #1c1030, #0b1220 60%, #070b12)",
-    neon:    "radial-gradient(900px 450px at 40% 12%, rgba(186,94,255,.22), transparent 55%), radial-gradient(900px 450px at 70% 18%, rgba(94,203,255,.18), transparent 55%), linear-gradient(180deg, #120b2a, #0b1220 60%, #070b12)",
   };
 
-  function currentStage(cityDev) {
-    let s = STAGES[0];
-    for (const st of STAGES) if (cityDev >= st.req) s = st;
-    return s;
-  }
+  const safeParse = (s, fallback) => { try { return JSON.parse(s); } catch { return fallback; } };
 
-  function applyBg() {
-    const s = currentStage(state.up.cityDev);
-    document.body.style.background = BGS[s.bg] || BGS.night;
-  }
+  // Grid size (10x8 = 80 tiles, good builder feel; responsive CSS reduces columns on small screens)
+  const W = 10, H = 8;
 
-  // ---------- State ----------
+  // Tile contents
+  const EMPTY = "empty";
+  const TYPES = {
+    empty:  { key: "empty",  name: "Empty",  icon: "⬜", cost: 0,  base: 0,  info: "Open land." },
+    road:   { key: "road",   name: "Road",   icon: "🛣️", cost: 8,  base: 0,  info: "Boosts nearby Shops/Factories." },
+    house:  { key: "house",  name: "House",  icon: "🏠", cost: 15, base: 0.6,info: "+Passive income. Likes Parks & Roads." },
+    shop:   { key: "shop",   name: "Shop",   icon: "🏪", cost: 35, base: 0.0,info: "+Per-tap income. Likes Roads & Houses." },
+    factory:{ key: "factory",name: "Factory",icon: "🏭", cost: 80, base: 2.2,info: Big passive. Likes Roads. Hates Parks." },
+    park:   { key: "park",   name: "Park",   icon: "🌳", cost: 20, base: 0.0,info: Boosts nearby Houses/Shops." },
+  };
+
+  // Build menu order
+  const BUILD_MENU = ["house","shop","factory","park","road","bulldoze"];
+
+  // -------------------- State --------------------
   const state = {
-    cash: 0,
+    cash: 50,
     totalEarned: 0,
     lastTickAt: now(),
     lastSaveAt: 0,
 
-    // 18 tiles (good on desktop + mobile)
-    tiles: Array.from({ length: 18 }, () => ({ lvl: 0 })),
+    // board tiles store { type, lvl }
+    board: Array.from({ length: W * H }, () => ({ type: EMPTY, lvl: 0 })),
 
-    // 5 upgrades
+    // placement tool
+    tool: "house", // default selection
+
+    // 5 upgrades (builder-focused)
     up: {
-      tapBoost: 0,     // increases per tap
-      passive: 0,      // passive per second
-      cityDev: 0,      // global multiplier + unlock stage changes
-      buildSpeed: 0,   // higher chance to upgrade tile levels on click
-      zoning: 0,       // tile level value multiplier (makes buildings worth more)
+      zoning: 0,     // increases all building output
+      efficiency: 0, // reduces building costs
+      commerce: 0,   // increases shop per-tap power
+      logistics: 0,  // increases road adjacency effects
+      parks: 0,      // increases park adjacency effects (and reduces factory-park penalty)
     },
 
-    // Events (simple)
-    event: {
-      active: null,   // { name, endsAt, tapMult, passMult }
-      pending: null,  // { name, desc, ... }
-      nextAt: now() + 35_000
-    }
+    // first run intro flag
+    seenIntro: false
   };
 
-  // ---------- Economy ----------
-  function cityMult() {
-    return 1 + state.up.cityDev * 0.06; // 6% per level
+  // -------------------- Mechanics --------------------
+  function idx(x, y) { return y * W + x; }
+  function inBounds(x, y) { return x >= 0 && y >= 0 && x < W && y < H; }
+
+  function neighbors4(x, y) {
+    const n = [];
+    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+    for (const [dx,dy] of dirs) {
+      const nx = x + dx, ny = y + dy;
+      if (inBounds(nx, ny)) n.push([nx, ny]);
+    }
+    return n;
+  }
+  function neighbors8(x, y) {
+    const n = [];
+    for (let dy=-1; dy<=1; dy++) for (let dx=-1; dx<=1; dx++) {
+      if (dx===0 && dy===0) continue;
+      const nx = x + dx, ny = y + dy;
+      if (inBounds(nx, ny)) n.push([nx, ny]);
+    }
+    return n;
   }
 
-  function tileValueMult() {
-    // zoning makes each building level contribute more to income
-    return 1 + state.up.zoning * 0.12; // 12% per level
+  // Upgrade effects
+  function zoningMult() { return 1 + state.up.zoning * 0.08; }          // +8%/lvl
+  function costMult() { return 1 - Math.min(0.45, state.up.efficiency * 0.05); } // -5%/lvl up to -45%
+  function roadPower() { return 1 + state.up.logistics * 0.10; }         // +10%/lvl
+  function parkPower() { return 1 + state.up.parks * 0.12; }             // +12%/lvl
+  function shopMult() { return 1 + state.up.commerce * 0.12; }           // +12%/lvl
+
+  function buildingCost(typeKey) {
+    if (typeKey === "bulldoze") return 0;
+    const t = TYPES[typeKey];
+    return Math.ceil(t.cost * costMult());
   }
 
-  function tilesScore() {
-    // total "development score" from tiles: sum(level)
-    return state.tiles.reduce((a, t) => a + t.lvl, 0);
+  function bulldozeRefund(tile) {
+    if (tile.type === EMPTY) return 0;
+    // small refund so bulldozing isn't a total loss
+    const base = buildingCost(tile.type);
+    return Math.floor(base * 0.35);
   }
 
-  function perTapBase() {
-    return 1 + state.up.tapBoost * 1.6 + Math.pow(state.up.tapBoost, 1.18) * 0.25;
+  // Adjacency rules (builder feel)
+  // - Parks boost Houses & Shops in 8-neighborhood
+  // - Roads boost Shops & Factories in 4-neighborhood (logistics)
+  // - Houses near Shops get small bonus (walkability)
+  // - Factories near Parks get penalty (pollution), reduced by park upgrade
+  function computeTileYield(x, y) {
+    const tile = state.board[idx(x,y)];
+    if (tile.type === EMPTY || tile.type === "road" || tile.type === "park") {
+      return { passive: 0, tap: 0, mood: "" };
+    }
+
+    let passive = 0;
+    let tap = 0;
+    let moodParts = [];
+
+    const t = TYPES[tile.type];
+    // base output
+    passive += t.base;
+
+    // scan neighbors
+    let parksAround = 0, roads4 = 0, houses8 = 0, shops8 = 0;
+    for (const [nx, ny] of neighbors8(x, y)) {
+      const nt = state.board[idx(nx, ny)].type;
+      if (nt === "park") parksAround++;
+      if (nt === "house") houses8++;
+      if (nt === "shop") shops8++;
+    }
+    for (const [nx, ny] of neighbors4(x, y)) {
+      const nt = state.board[idx(nx, ny)].type;
+      if (nt === "road") roads4++;
+    }
+
+    // type-specific interactions
+    if (tile.type === "house") {
+      // Houses love parks & a bit of road access
+      const pBonus = 1 + parksAround * 0.08 * parkPower();
+      const rBonus = 1 + roads4 * 0.05 * roadPower();
+      passive *= pBonus * rBonus;
+      if (parksAround > 0) moodParts.push(`+Parks`);
+      if (roads4 > 0) moodParts.push(`+Roads`);
+    }
+
+    if (tile.type === "shop") {
+      // Shops convert city activity into per-tap power; roads help deliveries; houses help customers
+      const rBonus = 1 + roads4 * 0.10 * roadPower();
+      const hBonus = 1 + houses8 * 0.03;
+      // Shops primarily add per-tap, but also tiny passive
+      tap += (0.7 + state.up.commerce * 0.12) * rBonus * hBonus; // per-tap additive
+      passive += 0.08 * rBonus; // small passive
+      if (roads4 > 0) moodParts.push(`+Roads`);
+      if (houses8 > 0) moodParts.push(`+Houses`);
+    }
+
+    if (tile.type === "factory") {
+      // Factories big passive; roads very important; parks nearby are bad (pollution)
+      const rBonus = 1 + roads4 * 0.14 * roadPower();
+      passive *= rBonus;
+      if (roads4 > 0) moodParts.push(`+Roads`);
+
+      if (parksAround > 0) {
+        // penalty reduced by parks upgrade
+        const penaltyPerPark = Math.max(0.02, 0.06 - state.up.parks * 0.007);
+        const pen = 1 - parksAround * penaltyPerPark;
+        passive *= Math.max(0.55, pen);
+        moodParts.push(`-Parks`);
+      }
+    }
+
+    // global zoning multiplier
+    passive *= zoningMult();
+    tap *= zoningMult() * shopMult();
+
+    return { passive, tap, mood: moodParts.join(" ") };
   }
 
-  function passiveBasePerSec() {
-    return state.up.passive * 0.35 + Math.pow(state.up.passive, 1.22) * 0.06;
+  function totalYields() {
+    let passive = 0;
+    let tap = 0;
+    for (let y=0; y<H; y++) for (let x=0; x<W; x++) {
+      const yld = computeTileYield(x,y);
+      passive += yld.passive;
+      tap += yld.tap;
+    }
+    return { passive, tap };
   }
 
-  function eventMults() {
-    if (!state.event.active) return { tap: 1, pas: 1 };
-    return { tap: state.event.active.tapMult, pas: state.event.active.passMult };
+  function skylineString() {
+    // show the “top row vibe”: count buildings and show a small skyline preview
+    const counts = { house:0, shop:0, factory:0, park:0, road:0 };
+    for (const t of state.board) if (t.type !== EMPTY) counts[t.type] = (counts[t.type]||0)+1;
+
+    const b = [];
+    const pushN = (icon, n) => { for (let i=0;i<n;i++) b.push(icon); };
+
+    // skyline composition: factories, shops, houses + some trees
+    pushN("🏭", Math.min(3, counts.factory));
+    pushN("🏪", Math.min(4, counts.shop));
+    pushN("🏠", Math.min(8, counts.house));
+    pushN("🌳", Math.min(4, counts.park));
+    if (b.length === 0) return "⬜ ⬜ ⬜ ⬜ ⬜ ⬜ ⬜ ⬜ ⬜ ⬜";
+    return b.slice(0, 12).join(" ");
   }
 
-  function tileIncomeBonus() {
-    // tiles add meaningful visible progression: more buildings = more money
-    // scaled so it matters, but doesn’t explode instantly
-    return (tilesScore() * 0.18) * tileValueMult();
-  }
-
-  function perTap() {
-    const e = eventMults();
-    return (perTapBase() + tileIncomeBonus()) * cityMult() * e.tap;
-  }
-
-  function passivePerSec() {
-    const e = eventMults();
-    return (passiveBasePerSec() + tileIncomeBonus() * 0.25) * cityMult() * e.pas;
-  }
-
-  // ---------- Costs (5 upgrades) ----------
-  function costTapBoost()   { return 12  * Math.pow(1.18, state.up.tapBoost); }
-  function costPassive()    { return 30  * Math.pow(1.20, state.up.passive); }
-  function costCityDev()    { return 160 * Math.pow(1.22, state.up.cityDev) * (1 + state.up.cityDev * 0.02); }
-  function costBuildSpeed() { return 90  * Math.pow(1.24, state.up.buildSpeed); }
-  function costZoning()     { return 110 * Math.pow(1.25, state.up.zoning); }
-
-  // ---------- Save / Load ----------
+  // -------------------- Save / Load --------------------
   function exportSave() {
     const data = {
-      v: 3,
+      v: 4,
       cash: state.cash,
       totalEarned: state.totalEarned,
-      tiles: state.tiles,
+      board: state.board,
       up: state.up,
-      event: state.event,
+      seenIntro: state.seenIntro,
       lastTickAt: state.lastTickAt
     };
     return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
@@ -298,168 +474,264 @@ document.addEventListener("DOMContentLoaded", () => {
   function importSave(code) {
     const json = decodeURIComponent(escape(atob(code.trim())));
     const data = safeParse(json, null);
-    if (!data || data.v !== 3) throw new Error("Bad save");
+    if (!data || data.v !== 4) throw new Error("Bad save");
 
     state.cash = Number(data.cash ?? 0) || 0;
     state.totalEarned = Number(data.totalEarned ?? 0) || 0;
-    state.tiles = Array.isArray(data.tiles) ? data.tiles.map(t => ({ lvl: clampInt(t.lvl, 0, MAX_LVL) })) : state.tiles;
-    state.up = {
-      tapBoost: clampInt(data.up?.tapBoost, 0, 1e9),
-      passive: clampInt(data.up?.passive, 0, 1e9),
-      cityDev: clampInt(data.up?.cityDev, 0, 1e9),
-      buildSpeed: clampInt(data.up?.buildSpeed, 0, 1e9),
-      zoning: clampInt(data.up?.zoning, 0, 1e9),
-    };
-    state.event = data.event ?? state.event;
-    state.lastTickAt = Number(data.lastTickAt ?? now()) || now();
-  }
 
-  function clampInt(n, a, b) {
-    n = Number(n);
-    if (!Number.isFinite(n)) return a;
-    return Math.max(a, Math.min(b, Math.floor(n)));
+    if (Array.isArray(data.board) && data.board.length === W*H) {
+      state.board = data.board.map(t => ({
+        type: TYPES[t.type]?.key ? t.type : EMPTY,
+        lvl: 0
+      }));
+    }
+
+    state.up = {
+      zoning: Math.max(0, Math.floor(Number(data.up?.zoning ?? 0) || 0)),
+      efficiency: Math.max(0, Math.floor(Number(data.up?.efficiency ?? 0) || 0)),
+      commerce: Math.max(0, Math.floor(Number(data.up?.commerce ?? 0) || 0)),
+      logistics: Math.max(0, Math.floor(Number(data.up?.logistics ?? 0) || 0)),
+      parks: Math.max(0, Math.floor(Number(data.up?.parks ?? 0) || 0)),
+    };
+
+    state.seenIntro = !!data.seenIntro;
+    state.lastTickAt = Number(data.lastTickAt ?? now()) || now();
   }
 
   function save() {
     localStorage.setItem(SAVE_KEY, exportSave());
     state.lastSaveAt = now();
   }
-
   function load() {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return;
     try { importSave(raw); } catch (e) { console.warn("Save load failed", e); }
   }
 
-  // ---------- Events ----------
-  const EVENTS = [
-    { name: "City Festival 🎉", desc: "2× Tap for 25s", duration: 25_000, tapMult: 2.0, passMult: 1.0 },
-    { name: "Construction Boom 🏗️", desc: "2× Passive for 25s", duration: 25_000, tapMult: 1.0, passMult: 2.0 },
-    { name: "Investment Grant 💡", desc: "Instant cash payout", duration: 0, tapMult: 1.0, passMult: 1.0, instant: true },
-  ];
+  // -------------------- Upgrades (5) --------------------
+  function costUpgrade(key) {
+    const lvl = state.up[key];
+    const base = {
+      zoning: 120,
+      efficiency: 140,
+      commerce: 130,
+      logistics: 150,
+      parks: 125
+    }[key] || 120;
+    const growth = {
+      zoning: 1.22,
+      efficiency: 1.24,
+      commerce: 1.23,
+      logistics: 1.25,
+      parks: 1.23
+    }[key] || 1.23;
 
-  function maybeSpawnEvent() {
-    if (state.event.pending || state.event.active) return;
-    if (now() < state.event.nextAt) return;
-
-    // small chance gate; city dev increases frequency a bit
-    const luck = 1 + state.up.cityDev * 0.01;
-    if (Math.random() > 0.55 / Math.min(2.2, luck)) {
-      state.event.nextAt = now() + 35_000 + Math.random() * 35_000;
-      return;
-    }
-
-    state.event.pending = { ...EVENTS[Math.floor(Math.random() * EVENTS.length)] };
+    return Math.ceil(base * Math.pow(growth, lvl) * (1 + lvl * 0.02));
   }
 
-  function activateEvent() {
-    const e = state.event.pending;
-    if (!e) return;
-
-    if (e.instant) {
-      const grant = passivePerSec() * (12 + state.up.cityDev * 0.25);
-      addCash(grant);
-      toast(`💡 Grant: +$${fmt(grant)}`);
-      state.event.pending = null;
-      state.event.nextAt = now() + 45_000;
-      render();
-      return;
-    }
-
-    state.event.active = {
-      name: e.name,
-      tapMult: e.tapMult,
-      passMult: e.passMult,
-      endsAt: now() + e.duration
-    };
-    state.event.pending = null;
-    state.event.nextAt = now() + 60_000;
-    toast("✅ Event activated");
-    render();
-  }
-
-  function tickEventEnd() {
-    if (state.event.active && now() >= state.event.active.endsAt) {
-      state.event.active = null;
-      toast("⏱️ Event ended");
-      render();
-    }
-  }
-
-  // ---------- Tile visuals ----------
-  function buildChance() {
-    // buildSpeed makes tile upgrades VERY noticeable
-    // base 45% + 6% per level, capped at 92%
-    return Math.min(0.92, 0.45 + state.up.buildSpeed * 0.06);
-  }
-
-  function clickTile(i) {
-    // earn money
-    const gain = perTap();
-    addCash(gain);
-
-    // visibly upgrade the clicked tile
-    const t = state.tiles[i];
-    if (t.lvl < MAX_LVL && Math.random() < buildChance()) {
-      t.lvl++;
-      // tiny reward so leveling feels good
-      addCash(2 + t.lvl * 1.5);
-    }
-
-    // ALSO: small chance to upgrade a random other tile (city "spreads") as City Dev grows
-    if (state.up.cityDev >= 10 && Math.random() < Math.min(0.18, state.up.cityDev * 0.003)) {
-      const j = Math.floor(Math.random() * state.tiles.length);
-      if (state.tiles[j].lvl < MAX_LVL) state.tiles[j].lvl++;
-    }
-
-    render();
-  }
-
-  function skylineString() {
-    // skyline is based on the highest tiles (top 12)
-    const lvls = state.tiles.map(t => t.lvl).sort((a,b) => b - a).slice(0, 12);
-    // always show something
-    if (lvls.every(x => x === 0)) return "⬜ ⬜ ⬜ ⬜ ⬜ ⬜ ⬜ ⬜ ⬜ ⬜ ⬜ ⬜";
-    return lvls.map(l => BUILDING[l]).join(" ");
-  }
-
-  // ---------- Cash helpers ----------
-  function addCash(amount) {
-    if (!Number.isFinite(amount) || amount <= 0) return;
-    state.cash += amount;
-    state.totalEarned += amount;
-  }
-
-  // ---------- Buying upgrades ----------
-  function buy(cost, applyFn, msg) {
-    if (state.cash < cost) return toast("Not enough cash.");
-    state.cash -= cost;
-    applyFn();
-    toast(msg);
+  function buyUpgrade(key) {
+    const c = costUpgrade(key);
+    if (state.cash < c) return toast("Not enough cash.");
+    state.cash -= c;
+    state.up[key] += 1;
+    toast("Upgrade purchased!");
     render();
     save();
   }
 
-  // ---------- UI ----------
-  function render() {
-    applyBg();
-    const stage = currentStage(state.up.cityDev);
-    const e = eventMults();
+  // -------------------- Building Placement --------------------
+  function tryPlace(x, y) {
+    const i = idx(x, y);
+    const tile = state.board[i];
 
-    const eventLine = state.event.active
-      ? `${state.event.active.name} (ends in ${Math.max(0, Math.ceil((state.event.active.endsAt - now())/1000))}s)`
-      : state.event.pending
-        ? `${state.event.pending.name} — ${state.event.pending.desc}`
-        : "No event right now";
+    if (state.tool === "bulldoze") {
+      if (tile.type === EMPTY) return toast("Nothing to bulldoze.");
+      const refund = bulldozeRefund(tile);
+      state.board[i] = { type: EMPTY, lvl: 0 };
+      state.cash += refund;
+      toast(`Bulldozed (+$${fmt(refund)})`);
+      flashTile(i);
+      render();
+      save();
+      return;
+    }
+
+    const type = state.tool;
+    const cost = buildingCost(type);
+
+    if (tile.type !== EMPTY) return toast("That tile is occupied. Use Bulldoze.");
+    if (state.cash < cost) return toast("Not enough cash to build that.");
+
+    state.cash -= cost;
+    state.board[i] = { type, lvl: 0 };
+    toast(`Built: ${TYPES[type].icon} ${TYPES[type].name}`);
+    flashTile(i);
+    render();
+    save();
+  }
+
+  function flashTile(index) {
+    const el = document.querySelector(`[data-i="${index}"]`);
+    if (!el) return;
+    el.classList.remove("flash");
+    void el.offsetWidth; // restart animation
+    el.classList.add("flash");
+  }
+
+  // -------------------- Tapping --------------------
+  function tapCity() {
+    const { tap } = totalYields();
+    const baseTap = 1.0;
+    const gain = (baseTap + tap) * (1 + state.up.zoning * 0.02);
+    state.cash += gain;
+    state.totalEarned += gain;
+    toast(`+$${fmt(gain)} (tap)`);
+    render();
+  }
+
+  // -------------------- Main tick (passive) --------------------
+  function tick() {
+    const t = now();
+    const dt = (t - state.lastTickAt) / 1000;
+    state.lastTickAt = t;
+
+    const { passive } = totalYields();
+    const gain = passive * dt;
+    if (gain > 0) {
+      state.cash += gain;
+      state.totalEarned += gain;
+    }
+
+    if (t - state.lastSaveAt > 10_000) save();
+  }
+
+  // -------------------- UI --------------------
+  function toolCard(key) {
+    if (key === "bulldoze") {
+      const sel = state.tool === "bulldoze";
+      return `
+        <div class="tool ${sel ? "sel" : ""}" data-tool="bulldoze">
+          <div class="icon">🧹</div>
+          <div>
+            <div class="name">Bulldoze</div>
+            <div class="info">Clear a tile (refund ~35%).</div>
+          </div>
+        </div>
+      `;
+    }
+
+    const t = TYPES[key];
+    const sel = state.tool === key;
+    const cost = buildingCost(key);
+
+    return `
+      <div class="tool ${sel ? "sel" : ""}" data-tool="${key}">
+        <div class="icon">${t.icon}</div>
+        <div>
+          <div class="name">${t.name} <span class="mono" style="opacity:.75;">$${fmt(cost)}</span></div>
+          <div class="info">${t.info}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function shopItem(title, desc, meta, cost, id, primary=false) {
+    return `
+      <div class="shopItem">
+        <div class="t">${title}</div>
+        <div class="d">${desc}</div>
+        <div class="b">
+          <div>
+            <div class="meta">${meta}</div>
+            <div class="meta">Cost: <b>$${fmt(cost)}</b></div>
+          </div>
+          <button class="btn ${primary ? "primary" : ""}" id="${id}">Buy</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderModal() {
+    if (state.seenIntro) return "";
+
+    return `
+      <div class="modalBackdrop" id="introBackdrop">
+        <div class="modal">
+          <div class="modalHeader">
+            <div>
+              <h3>Welcome to Flip City — Builder Edition</h3>
+              <div class="sub">You’re the city planner. Place buildings, connect roads, and grow a living economy.</div>
+            </div>
+            <button class="btn small ghost" id="btnSkipIntro">Close</button>
+          </div>
+
+          <div class="modalBody">
+            <div class="modalGrid">
+              <div class="step">
+                <div class="title">1) Pick a building</div>
+                <div class="text">
+                  Use the <b>Build Menu</b> (House, Shop, Factory, Park, Road). Each has a cost and a role.
+                </div>
+              </div>
+              <div class="step">
+                <div class="title">Pro tip</div>
+                <div class="text">
+                  Start with <b>Houses</b> + <b>Parks</b>, then add <b>Roads</b> and <b>Shops</b> for tap power.
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="title">2) Place on the grid</div>
+                <div class="text">
+                  Click a tile to build. If you make a mistake, choose <b>Bulldoze</b>.
+                </div>
+              </div>
+              <div class="step">
+                <div class="title">Adjacency matters</div>
+                <div class="text">
+                  <b>Parks</b> boost nearby Houses/Shops. <b>Roads</b> boost Shops/Factories.
+                  Keep <b>Factories away from Parks</b> (pollution penalty).
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="title">3) Earn two ways</div>
+                <div class="text">
+                  <b>Passive</b> comes from Houses/Factories (with bonuses). <b>Tap</b> power comes mostly from Shops.
+                  Use the big <b>Tap</b> button when you want bursts of cash.
+                </div>
+              </div>
+              <div class="step">
+                <div class="title">Upgrades (5)</div>
+                <div class="text">
+                  Improve the whole city: <b>Zoning</b>, <b>Efficiency</b> (cheaper builds), <b>Commerce</b> (shops),
+                  <b>Logistics</b> (roads), <b>Parks</b> (green bonuses).
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modalFooter">
+            <span class="sub">You can reopen instructions anytime with <b>Help</b>.</span>
+            <button class="btn primary" id="btnStartGame">Start Building</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function render() {
+    const yields = totalYields();
 
     root.innerHTML = `
       <div class="wrap">
         <div class="top">
           <div>
             <h1>Flip City</h1>
-            <div class="sub">Click tiles to build. Buildings = visible progress + more income.</div>
+            <div class="sub">A city builder where placement + adjacency = profit.</div>
           </div>
           <div class="row">
+            <button class="btn small" id="btnHelp">Help</button>
             <button class="btn small" id="btnExport">Export</button>
             <button class="btn small" id="btnImport">Import</button>
             <button class="btn small danger" id="btnReset">Reset</button>
@@ -467,84 +739,164 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
 
         <div class="row" style="margin-top:12px;">
-          <div class="skyBox card" style="flex:1 1 520px;">
-            <h2>Skyline</h2>
-            <div class="skyline" title="Your skyline grows as tiles level up.">${skylineString()}</div>
+          <div class="card sky" style="flex:1 1 680px;">
+            <h2>Skyline Preview</h2>
+            <div class="skyline">${skylineString()}</div>
+            <div class="hint">Your skyline changes as you place buildings. Parks + roads improve yields.</div>
             <div class="row" style="margin-top:10px;">
-              <span class="pill">Stage: <b>${stage.name}</b></span>
-              <span class="pill">City Dev: <b>${state.up.cityDev}</b></span>
-              <span class="pill">Build chance: <b>${Math.round(buildChance()*100)}%</b></span>
-              <span class="pill">Event: <b>${e.tap.toFixed(2)}× tap</b> · <b>${e.pas.toFixed(2)}× passive</b></span>
-            </div>
-
-            <div class="hr"></div>
-
-            <div class="row" style="justify-content:space-between; align-items:center;">
-              <div class="sub" style="max-width: 720px;">
-                <b>City Event:</b> ${eventLine}
-              </div>
-              <button class="btn ${state.event.pending ? "primary" : ""}" id="btnEvent" ${state.event.pending ? "" : "disabled"} style="${state.event.pending ? "" : "opacity:.55; cursor:not-allowed;"}">
-                ${state.event.pending ? "Activate" : "No Event"}
-              </button>
+              <span class="pill">Cash: <b class="mono">$${fmt(state.cash)}</b></span>
+              <span class="pill">Passive/sec: <b class="mono">$${fmt(yields.passive)}</b></span>
+              <span class="pill">Tap power: <b class="mono">$${fmt(1 + yields.tap)}</b></span>
+              <span class="pill">Zoning: <b>${(zoningMult()).toFixed(2)}×</b></span>
+              <span class="pill">Build discount: <b>${Math.round((1-costMult())*100)}%</b></span>
             </div>
           </div>
         </div>
 
-        <div class="grid" style="margin-top:12px;">
+        <div class="grid2" style="margin-top:12px;">
           <div class="card">
             <h2>Stats</h2>
             <div class="statsGrid">
-              <div class="stat"><div class="k">Cash</div><div class="v">$${fmt(state.cash)}</div></div>
-              <div class="stat"><div class="k">Total Earned</div><div class="v">$${fmt(state.totalEarned)}</div></div>
-              <div class="stat"><div class="k">Per Tap</div><div class="v">$${fmt(perTap())}</div></div>
-              <div class="stat"><div class="k">Passive / sec</div><div class="v">$${fmt(passivePerSec())}</div></div>
+              <div class="stat"><div class="k">Cash</div><div class="v mono">$${fmt(state.cash)}</div></div>
+              <div class="stat"><div class="k">Total Earned</div><div class="v mono">$${fmt(state.totalEarned)}</div></div>
+              <div class="stat"><div class="k">Passive / sec</div><div class="v mono">$${fmt(yields.passive)}</div></div>
+              <div class="stat"><div class="k">Tap Power</div><div class="v mono">$${fmt(1 + yields.tap)}</div></div>
             </div>
 
             <div class="hr"></div>
 
-            <button class="btn primary" id="btnTap">Tap Anywhere (+$${fmt(perTap())})</button>
-            <div class="sub" style="margin-top:10px;">
-              Tip: Clicking tiles is best because it also <b>builds</b> (visible upgrades).
+            <button class="btn primary" id="btnTap">Tap (collect activity)</button>
+            <div class="panelSmall" style="margin-top:10px;">
+              Tap is boosted by <b>Shops</b>, and Shops get stronger with <b>Roads</b> and nearby <b>Houses</b>.
+            </div>
+
+            <div class="hr"></div>
+
+            <h2>Build Menu</h2>
+            <div class="buildBar" id="buildBar">
+              ${BUILD_MENU.map(toolCard).join("")}
+            </div>
+
+            <div class="panelSmall" style="margin-top:10px;">
+              Selected: <b>${state.tool === "bulldoze" ? "Bulldoze" : TYPES[state.tool].name}</b>
+              ${state.tool !== "bulldoze" ? ` · Cost: <b>$${fmt(buildingCost(state.tool))}</b>` : ""}
             </div>
           </div>
 
-          <div class="card">
+          <div class="card cityWrap">
+            <h2>City Grid</h2>
+            <div class="panelSmall">
+              Click a tile to place the selected building. Hover/tap tiles to see their yields.
+            </div>
+            <div class="board">
+              <div class="grid" id="grid"></div>
+            </div>
+
+            <div class="hr"></div>
+
             <h2>Upgrades (5)</h2>
             <div class="shop">
-              ${shopItem("Tap Boost", "More money per click.", `Level ${state.up.tapBoost}`, costTapBoost(), "buyTapBoost")}
-              ${shopItem("Passive Income", "Earn money every second.", `Level ${state.up.passive}`, costPassive(), "buyPassive")}
-              ${shopItem("City Development", "Boosts all income + unlock stages.", `Level ${state.up.cityDev}`, costCityDev(), "buyCityDev")}
-              ${shopItem("Build Speed", "Tiles level up more often (VISUAL!).", `Level ${state.up.buildSpeed}`, costBuildSpeed(), "buyBuildSpeed")}
-              ${shopItem("Zoning Policy", "Buildings are worth more.", `Level ${state.up.zoning}`, costZoning(), "buyZoning")}
+              ${shopItem(
+                "Zoning Policy",
+                "All buildings earn more (global multiplier).",
+                `Level ${state.up.zoning} · ${(zoningMult()).toFixed(2)}× output`,
+                costUpgrade("zoning"),
+                "up_zoning",
+                true
+              )}
+              ${shopItem(
+                "Construction Efficiency",
+                "Buildings cost less to place.",
+                `Level ${state.up.efficiency} · ${Math.round((1-costMult())*100)}% discount`,
+                costUpgrade("efficiency"),
+                "up_efficiency"
+              )}
+              ${shopItem(
+                "Commerce Boost",
+                "Shops generate more tap power.",
+                `Level ${state.up.commerce} · ${(shopMult()).toFixed(2)}× shop tap`,
+                costUpgrade("commerce"),
+                "up_commerce"
+              )}
+              ${shopItem(
+                "Logistics Network",
+                "Road bonuses get stronger.",
+                `Level ${state.up.logistics} · ${(roadPower()).toFixed(2)}× road effects`,
+                costUpgrade("logistics"),
+                "up_logistics"
+              )}
+              ${shopItem(
+                "Parks Department",
+                "Park bonuses get stronger; factories less annoyed by parks.",
+                `Level ${state.up.parks} · ${(parkPower()).toFixed(2)}× park effects`,
+                costUpgrade("parks"),
+                "up_parks"
+              )}
             </div>
-          </div>
-        </div>
 
-        <div class="row" style="margin-top:12px;">
-          <div class="card" style="flex: 1 1 100%;">
-            <h2>City Tiles (click to build)</h2>
-            <div class="sub">You should see tiles change from ⬜ → 🏠 → 🏢 → 🏬 → 🏙️ → 🌆</div>
-            <div class="tilesWrap" style="margin-top:10px;">
-              <div class="tiles" id="tiles"></div>
+            <div class="panelSmall" style="margin-top:10px;">
+              Builder tip: <b>Parks near Houses</b> are huge early. <b>Roads next to Shops/Factories</b> are huge mid-game.
             </div>
           </div>
         </div>
 
         <div id="toast" class="toast"></div>
+        ${renderModal()}
       </div>
     `;
 
+    // Wire build tools
+    document.querySelectorAll("[data-tool]").forEach(el => {
+      el.addEventListener("click", () => {
+        state.tool = el.getAttribute("data-tool");
+        render();
+      });
+    });
+
+    // Render grid tiles
+    const grid = document.getElementById("grid");
+    for (let y=0; y<H; y++) for (let x=0; x<W; x++) {
+      const i = idx(x,y);
+      const tile = state.board[i];
+      const yld = computeTileYield(x,y);
+      const icon = TYPES[tile.type].icon;
+
+      const title = (() => {
+        if (tile.type === EMPTY) return "Empty land";
+        const parts = [
+          `${TYPES[tile.type].name}`,
+          `Passive: $${fmt(yld.passive)}/sec`,
+          `Tap: +$${fmt(yld.tap)} per tap`,
+        ];
+        if (yld.mood) parts.push(`Adjacency: ${yld.mood}`);
+        return parts.join(" • ");
+      })();
+
+      const div = document.createElement("div");
+      div.className = "tile";
+      div.setAttribute("data-i", String(i));
+      div.title = title;
+      div.innerHTML = `
+        <div class="e">${icon}</div>
+        <div class="s">${tile.type === EMPTY ? "" : yld.mood || ""}</div>
+      `;
+      div.addEventListener("click", () => tryPlace(x,y));
+      grid.appendChild(div);
+    }
+
     // Wire buttons
-    document.getElementById("btnTap").onclick = () => { addCash(perTap()); render(); };
+    document.getElementById("btnTap").onclick = tapCity;
 
-    document.getElementById("buyTapBoost").onclick = () => buy(costTapBoost(), () => state.up.tapBoost++, "Tap Boost upgraded!");
-    document.getElementById("buyPassive").onclick = () => buy(costPassive(), () => state.up.passive++, "Passive Income upgraded!");
-    document.getElementById("buyCityDev").onclick = () => buy(costCityDev(), () => state.up.cityDev++, "City Development upgraded!");
-    document.getElementById("buyBuildSpeed").onclick = () => buy(costBuildSpeed(), () => state.up.buildSpeed++, "Build Speed upgraded!");
-    document.getElementById("buyZoning").onclick = () => buy(costZoning(), () => state.up.zoning++, "Zoning Policy upgraded!");
+    document.getElementById("up_zoning").onclick = () => buyUpgrade("zoning");
+    document.getElementById("up_efficiency").onclick = () => buyUpgrade("efficiency");
+    document.getElementById("up_commerce").onclick = () => buyUpgrade("commerce");
+    document.getElementById("up_logistics").onclick = () => buyUpgrade("logistics");
+    document.getElementById("up_parks").onclick = () => buyUpgrade("parks");
 
-    const btnEvent = document.getElementById("btnEvent");
-    if (btnEvent && state.event.pending) btnEvent.onclick = activateEvent;
+    document.getElementById("btnHelp").onclick = () => {
+      state.seenIntro = false;
+      render();
+    };
 
     document.getElementById("btnExport").onclick = () => {
       const code = exportSave();
@@ -566,60 +918,21 @@ document.addEventListener("DOMContentLoaded", () => {
       location.reload();
     };
 
-    // Render tiles
-    const tilesEl = document.getElementById("tiles");
-    state.tiles.forEach((t, i) => {
-      const btn = document.createElement("div");
-      btn.className = "tile";
-      btn.innerHTML = `<div class="icon">${BUILDING[t.lvl]}</div><div class="lvl">Tile Lv ${t.lvl}</div>`;
-      btn.onclick = () => clickTile(i);
-      tilesEl.appendChild(btn);
-    });
+    // Modal buttons
+    const startBtn = document.getElementById("btnStartGame");
+    const skipBtn = document.getElementById("btnSkipIntro");
+    if (startBtn) startBtn.onclick = () => { state.seenIntro = true; save(); render(); };
+    if (skipBtn) skipBtn.onclick = () => { state.seenIntro = true; save(); render(); };
   }
 
-  function shopItem(title, desc, meta, cost, id) {
-    const affordable = state.cash >= cost;
-    return `
-      <div class="shopItem">
-        <div class="t">${title}</div>
-        <div class="d">${desc}</div>
-        <div class="b">
-          <div>
-            <div class="meta">${meta}</div>
-            <div class="meta">Cost: <b>$${fmt(cost)}</b></div>
-          </div>
-          <button class="btn ${affordable ? "primary" : ""}" id="${id}">Buy</button>
-        </div>
-      </div>
-    `;
-  }
-
-  // ---------- Main loop ----------
-  function tick() {
-    const t = now();
-    const dt = (t - state.lastTickAt) / 1000;
-    state.lastTickAt = t;
-
-    // passive income
-    addCash(passivePerSec() * dt);
-
-    // events
-    maybeSpawnEvent();
-    tickEventEnd();
-
-    // autosave
-    if (t - state.lastSaveAt > 10_000) save();
-  }
-
-  // ---------- Start ----------
+  // -------------------- Boot --------------------
   load();
-  applyBg();
   render();
 
   setInterval(() => {
     tick();
     render();
-  }, 250);
+  }, 400);
 
   window.addEventListener("beforeunload", () => save());
 });
