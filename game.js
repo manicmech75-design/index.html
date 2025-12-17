@@ -1,4 +1,4 @@
-/* City Flip - game.js (Tutorial + Goals + SFX/Haptics + Prestige) */
+/* City Flip - game.js (Tutorial + Goals + SFX/Haptics + Prestige + Settings) */
 
 const $ = (id) => document.getElementById(id);
 
@@ -49,9 +49,20 @@ const els = {
   tutorialBody: $("tutorialBody"),
   tutorialNext: $("tutorialNext"),
   tutorialSkip: $("tutorialSkip"),
+
+  // settings
+  settingsBtn: $("settingsBtn"),
+  settingsModal: $("settingsModal"),
+  settingsClose: $("settingsClose"),
+  settingsSave: $("settingsSave"),
+  themeSelect: $("themeSelect"),
+  volumeRange: $("volumeRange"),
+  volumeLabel: $("volumeLabel"),
+  clearCacheBtn: $("clearCacheBtn"),
+  resetTutorialBtn: $("resetTutorialBtn"),
 };
 
-const SAVE_KEY = "cityflip_save_v2";
+const SAVE_KEY = "cityflip_save_v3";
 const TUTORIAL_KEY = "cityflip_tutorial_seen_v1";
 
 const TILE_EMOJIS = ["🏙️","🏢","🏠","🏬","🏟️","🏗️","🌉","🚇","🌆"];
@@ -66,26 +77,22 @@ const state = {
   passiveLevel: 0,
   cityDevLevel: 0,
 
-  prestigeLevel: 0,      // permanent
-  prestigeMult: 1.0,     // derived
+  prestigeLevel: 0,
+  prestigeMult: 1.0,
   prestigeCostBase: 25000,
 
-  tiles: [],             // { level }
+  tiles: [],
   lastSeen: Date.now(),
 
   // settings
   soundOn: true,
   hapticsOn: true,
+  theme: "neon",
+  volume: 0.60, // 0..1
 
   // stats for goals
   taps: 0,
-  goals: {
-    g1: false,
-    g2: false,
-    g3: false,
-    g4: false,
-    g5: false,
-  },
+  goals: { g1:false, g2:false, g3:false, g4:false, g5:false },
 };
 
 // -------------------- HELPERS --------------------
@@ -110,12 +117,16 @@ function showToast(text = "Saved") {
   showToast._t = setTimeout(() => (els.toast.style.display = "none"), 900);
 }
 
+// -------------------- THEME --------------------
+function applyTheme() {
+  document.body.dataset.theme = state.theme || "neon";
+}
+
 // -------------------- SOUND + HAPTICS --------------------
 let audioCtx = null;
 function sfx(type) {
   if (!state.soundOn) return;
 
-  // create context only after interaction
   if (!audioCtx) {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
@@ -126,7 +137,6 @@ function sfx(type) {
   const o = audioCtx.createOscillator();
   const g = audioCtx.createGain();
 
-  // simple “gamey” bleeps
   let freq = 440, dur = 0.06;
   if (type === "tap") { freq = 520; dur = 0.03; }
   if (type === "buy") { freq = 700; dur = 0.06; }
@@ -137,13 +147,13 @@ function sfx(type) {
   o.type = "sine";
   o.frequency.setValueAtTime(freq, now);
 
+  const peak = 0.12 * clamp(state.volume ?? 0.6, 0, 1);
   g.gain.setValueAtTime(0.0001, now);
-  g.gain.exponentialRampToValueAtTime(0.12, now + 0.01);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), now + 0.01);
   g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
 
   o.connect(g);
   g.connect(audioCtx.destination);
-
   o.start(now);
   o.stop(now + dur + 0.02);
 }
@@ -155,7 +165,6 @@ function buzz(ms = 10) {
 
 // -------------------- CORE MATH --------------------
 function computePrestigeMult() {
-  // +25% per prestige
   state.prestigeMult = 1 + state.prestigeLevel * 0.25;
 }
 
@@ -175,11 +184,7 @@ function totalPerTapPreview() {
 function getTapBoostCost() { return Math.floor(25 * Math.pow(1.35, state.tapBoostLevel)); }
 function getPassiveCost() { return Math.floor(50 * Math.pow(1.45, state.passiveLevel)); }
 function getCityDevCost() { return Math.floor(75 * Math.pow(1.5, state.cityDevLevel)); }
-
-function getPrestigeCost() {
-  // grows gently each prestige
-  return Math.floor(state.prestigeCostBase * Math.pow(1.6, state.prestigeLevel));
-}
+function getPrestigeCost() { return Math.floor(state.prestigeCostBase * Math.pow(1.6, state.prestigeLevel)); }
 
 function canAfford(cost) { return state.cash >= cost; }
 function spend(cost) { state.cash = Math.max(0, state.cash - cost); }
@@ -230,7 +235,6 @@ function renderTiles() {
   state.tiles.forEach((t, idx) => {
     const btn = document.createElement("button");
     btn.className = "tileBtn";
-    btn.dataset.tutorial = "tile";
 
     const val = tileTapValue(t.level);
     const em = TILE_EMOJIS[idx % TILE_EMOJIS.length];
@@ -245,7 +249,7 @@ function renderTiles() {
     `;
 
     btn.addEventListener("click", () => {
-      if (tutorialLock && tutorialStep < 2) return; // lock during early steps
+      if (tutorialLock && tutorialStep < 2) return;
 
       const earned = tileTapValue(t.level);
       state.cash += earned;
@@ -254,7 +258,6 @@ function renderTiles() {
       sfx("tap");
       buzz(10);
 
-      // tile leveling
       if (Math.random() < 0.10) {
         t.level += 1;
         sfx("level");
@@ -265,7 +268,6 @@ function renderTiles() {
       render();
       renderTiles();
 
-      // tutorial progression
       if (tutorialLock && tutorialStep === 1) {
         tutorialProgressCount++;
         if (tutorialProgressCount >= 3) tutorialNextStep();
@@ -359,6 +361,7 @@ function importSave() {
     computePrestigeMult();
     createTilesIfMissing();
     applyUpgrades();
+    applyTheme();
     render();
     renderTiles();
     save();
@@ -368,7 +371,7 @@ function importSave() {
   }
 }
 
-// -------------------- GOALS / QUESTS --------------------
+// -------------------- GOALS --------------------
 function markGoal(el, done) {
   if (!el) return;
   el.style.opacity = done ? 1 : 0.55;
@@ -393,47 +396,22 @@ function rewardGoal(amount, label) {
 }
 
 function checkGoals() {
-  // G1: tap 10
-  if (!state.goals.g1 && state.taps >= 10) {
-    state.goals.g1 = true;
-    rewardGoal(50, "Tap 10 times");
-  }
-  // G2: reach $100
-  if (!state.goals.g2 && state.cash >= 100) {
-    state.goals.g2 = true;
-    rewardGoal(100, "Reach $100");
-  }
-  // G3: buy passive income at least once
-  if (!state.goals.g3 && state.passiveLevel >= 1) {
-    state.goals.g3 = true;
-    rewardGoal(200, "Buy Passive Income");
-  }
-  // G4: reach $1,000
-  if (!state.goals.g4 && state.cash >= 1000) {
-    state.goals.g4 = true;
-    rewardGoal(500, "Reach $1,000");
-  }
-  // G5: unlock prestige threshold
-  if (!state.goals.g5 && state.cash >= getPrestigeCost()) {
-    state.goals.g5 = true;
-    rewardGoal(1000, "Unlock Prestige");
-  }
+  if (!state.goals.g1 && state.taps >= 10) { state.goals.g1 = true; rewardGoal(50, "Tap 10 times"); }
+  if (!state.goals.g2 && state.cash >= 100) { state.goals.g2 = true; rewardGoal(100, "Reach $100"); }
+  if (!state.goals.g3 && state.passiveLevel >= 1) { state.goals.g3 = true; rewardGoal(200, "Buy Passive Income"); }
+  if (!state.goals.g4 && state.cash >= 1000) { state.goals.g4 = true; rewardGoal(500, "Reach $1,000"); }
+  if (!state.goals.g5 && state.cash >= getPrestigeCost()) { state.goals.g5 = true; rewardGoal(1000, "Unlock Prestige"); }
 }
 
 // -------------------- PRESTIGE --------------------
 function doPrestige() {
   const cost = getPrestigeCost();
-  if (!canAfford(cost)) {
-    log(`Need ${fmtMoney(cost)} to Prestige`);
-    return;
-  }
+  if (!canAfford(cost)) { log(`Need ${fmtMoney(cost)} to Prestige`); return; }
   if (!confirm(`Prestige resets progress but increases multiplier.\n\nSpend ${fmtMoney(cost)} to Prestige?`)) return;
 
-  // preserve long-term progress
   state.prestigeLevel += 1;
   computePrestigeMult();
 
-  // reset run progress
   state.cash = 0;
   state.tapBoostLevel = 0;
   state.passiveLevel = 0;
@@ -453,62 +431,30 @@ function doPrestige() {
   save();
 }
 
-// -------------------- TUTORIAL (GUIDED) --------------------
+// -------------------- TUTORIAL --------------------
 let tutorialStep = 0;
 let tutorialLock = false;
 let tutorialProgressCount = 0;
 
 const tutorialSteps = [
-  {
-    title: "Welcome to City Flip",
-    body: "This is a quick guided tour. You’ll tap tiles, buy an upgrade, then you’re free to build your skyline.",
-    focus: null,
-    lock: true
-  },
-  {
-    title: "Step 1: Tap tiles",
-    body: "Tap any City Tile 3 times to earn cash.",
-    focus: "tiles",
-    lock: true
-  },
-  {
-    title: "Step 2: Buy Tap Boost",
-    body: "Now buy your first Tap Boost (orange button). If you can’t afford it, tap a few more tiles.",
-    focus: "buyTapBoost",
-    lock: false
-  },
-  {
-    title: "Step 3: Passive Income",
-    body: "Passive Income earns money every second. Buy it once when you can.",
-    focus: "buyPassive",
-    lock: false
-  },
-  {
-    title: "Step 4: Goals + Prestige",
-    body: "Complete goals for bonus cash. Later, Prestige resets progress for a permanent multiplier.",
-    focus: "goalsBox",
-    lock: false
-  },
-  {
-    title: "You’re ready!",
-    body: "Tutorial complete. Tap fast, upgrade smart, and build your skyline.",
-    focus: null,
-    lock: false
-  },
+  { title:"Welcome to City Flip", body:"Quick guided tour: tap tiles, buy upgrades, then build your skyline.", focus:null, lock:true },
+  { title:"Step 1: Tap tiles", body:"Tap any City Tile 3 times to earn cash.", focus:"tiles", lock:true },
+  { title:"Step 2: Buy Tap Boost", body:"Buy Tap Boost (orange). If you can’t afford it, tap more tiles.", focus:"buyTapBoost", lock:false },
+  { title:"Step 3: Passive Income", body:"Buy Passive Income once to start earning every second.", focus:"buyPassive", lock:false },
+  { title:"Step 4: Goals + Prestige", body:"Goals give bonus cash. Prestige later for a permanent multiplier.", focus:"goalsBox", lock:false },
+  { title:"You’re ready!", body:"Tutorial complete. Tap fast, upgrade smart, build big.", focus:null, lock:false },
 ];
 
 function clearFocus() {
   document.querySelectorAll(".focusTarget").forEach((el) => el.classList.remove("focusTarget"));
 }
-
 function setFocus(id) {
   clearFocus();
   if (!id) return;
   const el = $(id);
   if (el) el.classList.add("focusTarget");
 }
-
-function tutorialOpen(fromButton = false) {
+function tutorialOpen(fromButton=false) {
   tutorialStep = 0;
   tutorialProgressCount = 0;
   tutorialLock = true;
@@ -516,13 +462,11 @@ function tutorialOpen(fromButton = false) {
   tutorialRender();
   if (!fromButton) localStorage.setItem(TUTORIAL_KEY, "1");
 }
-
 function tutorialClose() {
   if (els.tutorialModal) els.tutorialModal.style.display = "none";
   tutorialLock = false;
   clearFocus();
 }
-
 function tutorialRender() {
   const step = tutorialSteps[tutorialStep];
   if (!step) return;
@@ -537,25 +481,33 @@ function tutorialRender() {
     els.tutorialNext.textContent = (tutorialStep >= tutorialSteps.length - 1) ? "Done" : "Next";
   }
 }
-
 function tutorialNextStep() {
   tutorialProgressCount = 0;
   tutorialStep += 1;
-  if (tutorialStep >= tutorialSteps.length) {
-    tutorialClose();
-    return;
-  }
+  if (tutorialStep >= tutorialSteps.length) { tutorialClose(); return; }
   tutorialRender();
 }
-
 function tutorialSkip() {
   tutorialClose();
   log("Tutorial skipped ⏭️");
 }
 
+// -------------------- SETTINGS MODAL --------------------
+function openSettings() {
+  if (!els.settingsModal) return;
+  els.settingsModal.style.display = "flex";
+  if (els.themeSelect) els.themeSelect.value = state.theme || "neon";
+  if (els.volumeRange) els.volumeRange.value = Math.round((state.volume ?? 0.6) * 100);
+  if (els.volumeLabel) els.volumeLabel.textContent = `${Math.round((state.volume ?? 0.6) * 100)}%`;
+}
+function closeSettings() {
+  if (!els.settingsModal) return;
+  els.settingsModal.style.display = "none";
+}
+
 // -------------------- UI WIRING --------------------
 function wireUI() {
-  // toggles
+  // sound/haptics toggles
   if (els.soundBtn) {
     els.soundBtn.addEventListener("click", () => {
       state.soundOn = !state.soundOn;
@@ -574,26 +526,73 @@ function wireUI() {
   }
 
   // tutorial button
-  if (els.tutorialBtn) {
-    els.tutorialBtn.addEventListener("click", () => tutorialOpen(true));
-  }
+  if (els.tutorialBtn) els.tutorialBtn.addEventListener("click", () => tutorialOpen(true));
   if (els.tutorialNext) els.tutorialNext.addEventListener("click", () => {
-    if (tutorialStep === 2) {
-      // allow them to buy tap boost before moving on
-      if (state.tapBoostLevel < 1) {
-        showToast("Buy Tap Boost first");
-        return;
-      }
-    }
-    if (tutorialStep === 3) {
-      if (state.passiveLevel < 1) {
-        showToast("Buy Passive Income once");
-        return;
-      }
-    }
+    if (tutorialStep === 2 && state.tapBoostLevel < 1) { showToast("Buy Tap Boost first"); return; }
+    if (tutorialStep === 3 && state.passiveLevel < 1) { showToast("Buy Passive Income once"); return; }
     tutorialNextStep();
   });
   if (els.tutorialSkip) els.tutorialSkip.addEventListener("click", tutorialSkip);
+
+  // settings button + modal
+  if (els.settingsBtn) els.settingsBtn.addEventListener("click", openSettings);
+  if (els.settingsClose) els.settingsClose.addEventListener("click", closeSettings);
+
+  if (els.volumeRange) {
+    els.volumeRange.addEventListener("input", () => {
+      const pct = Number(els.volumeRange.value) || 0;
+      if (els.volumeLabel) els.volumeLabel.textContent = `${pct}%`;
+    });
+  }
+
+  if (els.settingsSave) {
+    els.settingsSave.addEventListener("click", () => {
+      if (els.themeSelect) state.theme = els.themeSelect.value || "neon";
+      if (els.volumeRange) state.volume = clamp((Number(els.volumeRange.value) || 0) / 100, 0, 1);
+
+      applyTheme();
+      sfx("buy");
+      showToast("Settings saved");
+      save();
+      closeSettings();
+      render();
+    });
+  }
+
+  // close settings by tapping backdrop
+  if (els.settingsModal) {
+    els.settingsModal.addEventListener("click", (e) => {
+      if (e.target === els.settingsModal) closeSettings();
+    });
+  }
+
+  // clear cache + refresh
+  if (els.clearCacheBtn) {
+    els.clearCacheBtn.addEventListener("click", async () => {
+      try {
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+        // tell SW to activate immediately (if waiting)
+        if (navigator.serviceWorker?.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: "SKIP_WAITING" });
+        }
+      } catch {}
+      showToast("Cache cleared");
+      setTimeout(() => location.reload(), 450);
+    });
+  }
+
+  // reset tutorial
+  if (els.resetTutorialBtn) {
+    els.resetTutorialBtn.addEventListener("click", () => {
+      localStorage.removeItem(TUTORIAL_KEY);
+      showToast("Tutorial reset");
+      closeSettings();
+      tutorialOpen(true);
+    });
+  }
 
   // upgrades
   if (els.buyTapBoost) {
@@ -607,7 +606,6 @@ function wireUI() {
       render(); save();
       log("Tap Boost purchased ✅");
       checkGoals();
-
       if (tutorialLock && tutorialStep === 2) tutorialNextStep();
     });
   }
@@ -623,7 +621,6 @@ function wireUI() {
       render(); save();
       log("Passive Income purchased ✅");
       checkGoals();
-
       if (tutorialLock && tutorialStep === 3) tutorialNextStep();
     });
   }
@@ -688,13 +685,12 @@ load();
 computePrestigeMult();
 createTilesIfMissing();
 applyUpgrades();
+applyTheme();
 wireUI();
 render();
 renderTiles();
 log("Game loaded ✅");
 handleOfflineEarnings();
 
-// auto-tutorial first time
-if (!localStorage.getItem(TUTORIAL_KEY)) {
-  tutorialOpen(false);
-}
+// auto tutorial first time
+if (!localStorage.getItem(TUTORIAL_KEY)) tutorialOpen(false);
