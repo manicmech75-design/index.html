@@ -1,1491 +1,882 @@
-// Flip City — Builder Edition v7.2 (Sunset + Skyline Art)
-// Earn-to-Collect: Activity fills over time (mostly Shops). Collect only when charged.
-// Includes: 5 upgrades, intro/help, "what to do next", disasters/events, support email.
+/* =========================
+   City Flip — FINAL
+   - Merge gameplay (select + move + merge)
+   - Passive income + offline earnings
+   - Upgrades shop (income, discount, grid expand, spawn discount, prestige boost)
+   - Daily reward
+   - Prestige system
+   - Achievements
+   - Sounds (WebAudio)
+   - Save/Load/Autosave
+   ========================= */
 
-document.addEventListener("DOMContentLoaded", () => {
-  const root = document.getElementById("game");
-  if (!root) return console.error("❌ Missing <div id='game'></div> in index.html");
+const $ = (s) => document.querySelector(s);
 
-  const SUPPORT_EMAIL = "supportcityflipgame.com";
+const fmt = (n) => {
+  n = Number(n) || 0;
+  if (n >= 1e9) return (n/1e9).toFixed(2).replace(/\.?0+$/,'') + "B";
+  if (n >= 1e6) return (n/1e6).toFixed(2).replace(/\.?0+$/,'') + "M";
+  if (n >= 1e3) return (n/1e3).toFixed(2).replace(/\.?0+$/,'') + "K";
+  return Math.floor(n).toString();
+};
 
-  // -------------------- Styles --------------------
-  const style = document.createElement("style");
-  style.textContent = `
-    :root { color-scheme: dark; }
-    body{
-      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      color:#eaf0ff; min-height:100vh;
+const SAVE_KEY = "cityflip_save_final_v1";
+const SETTINGS_KEY = "cityflip_settings_final_v1";
 
-      /* Sunset background */
-      background:
-        radial-gradient(900px 520px at 30% 12%, rgba(255,166,94,.28), transparent 55%),
-        radial-gradient(900px 520px at 72% 18%, rgba(255,94,186,.22), transparent 60%),
-        radial-gradient(1100px 650px at 50% 0%, rgba(94,203,255,.14), transparent 62%),
-        linear-gradient(180deg, #0a0630 0%, #2b0f3a 22%, #7a2b3f 45%, #d06a4a 68%, #0b1220 100%);
-    }
-    a{ color: rgba(94,203,255,.95); text-decoration: none; }
-    a:hover{ text-decoration: underline; }
+const BUILDINGS = [
+  { name: "House", icon:"🏠", baseIncome: 1 },
+  { name: "Shop", icon:"🏪", baseIncome: 3 },
+  { name: "Office", icon:"🏢", baseIncome: 8 },
+  { name: "Tower", icon:"🏙️", baseIncome: 20 },
+  { name: "Mega", icon:"🌆", baseIncome: 60 },
+  { name: "Arcology", icon:"🌇", baseIncome: 150 },
+  { name: "Skyline HQ", icon:"🛰️", baseIncome: 400 },
+  { name: "Neo Core", icon:"✨", baseIncome: 1200 },
+];
 
-    .wrap{ max-width: 1220px; margin: 0 auto; padding: 18px; }
-    .top{ display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start; }
-    h1{ margin:0; font-size: 20px; letter-spacing:.2px; }
-    .sub{ opacity:.82; font-size: 13px; }
-
-    .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:stretch; }
-    .grid2{ display:grid; gap: 12px; grid-template-columns: 1.05fr 1.95fr; align-items:start; }
-    @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
-
-    .card{
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 18px;
-      padding: 14px;
-      box-shadow: 0 12px 35px rgba(0,0,0,.35);
-      backdrop-filter: blur(6px);
-    }
-    .card h2{ margin:0 0 10px 0; font-size: 14px; opacity:.92; letter-spacing:.2px; }
-    .hr{ height:1px; background: rgba(255,255,255,.10); border-radius:99px; margin: 12px 0; }
-
-    .btn{
-      appearance:none; border:0; cursor:pointer;
-      background: rgba(255,255,255,.10);
-      color:#eaf0ff;
-      border:1px solid rgba(255,255,255,.16);
-      border-radius: 14px;
-      padding: 10px 12px;
-      font-weight: 950;
-      transition: transform .06s ease, background .15s ease, opacity .15s ease, box-shadow .15s ease;
-      user-select:none;
-      white-space: nowrap;
-    }
-    .btn:hover{ background: rgba(255,255,255,.14); }
-    .btn:active{ transform: translateY(1px) scale(.99); }
-    .btn.primary{ background: rgba(94,203,255,.18); border-color: rgba(94,203,255,.35); }
-    .btn.danger{ background: rgba(255,94,94,.14); border-color: rgba(255,94,94,.35); }
-    .btn.small{ padding: 8px 10px; border-radius: 12px; font-weight: 950; }
-    .btn.ghost{ background: rgba(255,255,255,.06); }
-    .btn[disabled]{ opacity:.55; cursor:not-allowed; }
-
-    .pill{
-      display:inline-flex; align-items:center; gap:8px;
-      padding: 7px 10px;
-      border-radius: 999px;
-      background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.14);
-      font-size: 12px;
-      opacity: .95;
-    }
-
-    .statsGrid{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
-    .stat{ background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10); border-radius: 14px; padding: 10px; }
-    .k{ font-size: 12px; opacity:.78; }
-    .v{ margin-top: 4px; font-size: 16px; font-weight: 1000; }
-    .mono{ font-variant-numeric: tabular-nums; }
-
-    .shop{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
-    @media (max-width: 560px){ .shop{ grid-template-columns: 1fr; } }
-    .shopItem{ background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius: 16px; padding: 12px; display:flex; flex-direction:column; gap: 8px; }
-    .shopItem .t{ font-weight: 1000; }
-    .shopItem .d{ font-size: 12px; opacity:.82; }
-    .shopItem .b{ display:flex; justify-content:space-between; align-items:center; gap: 10px; }
-    .shopItem .meta{ font-size: 12px; opacity:.86; }
-
-    .buildBar{
-      display:flex; gap: 8px; flex-wrap:wrap; align-items:center;
-      background: rgba(255,255,255,.05);
-      border:1px solid rgba(255,255,255,.10);
-      border-radius: 16px;
-      padding: 10px;
-    }
-    .tool{
-      display:flex; gap: 10px; align-items:center;
-      padding: 10px 12px;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.06);
-      cursor:pointer; user-select:none;
-      transition: transform .06s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
-      min-width: 190px;
-    }
-    .tool:hover{ background: rgba(255,255,255,.09); }
-    .tool:active{ transform: translateY(1px) scale(.99); }
-    .tool.sel{
-      background: rgba(94,203,255,.15);
-      border-color: rgba(94,203,255,.35);
-      box-shadow: 0 0 0 3px rgba(94,203,255,.10);
-    }
-    .tool.suggest{
-      border-color: rgba(255,206,94,.45);
-      box-shadow: 0 0 0 3px rgba(255,206,94,.12);
-    }
-    .tool .icon{ font-size: 18px; }
-    .tool .name{ font-weight: 1000; }
-    .tool .info{ font-size: 12px; opacity: .82; }
-
-    .sky{
-      border-radius: 18px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
-      padding: 12px;
-      overflow:hidden;
-    }
-    .skyline{ font-size: 30px; line-height: 1.1; letter-spacing: 2px; white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
-    .hint{ font-size: 12px; opacity:.82; margin-top: 6px; }
-    .hint b{ opacity: 1; }
-
-    /* Sunset skyline art panel */
-    .skyArt{
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.14);
-      overflow: hidden;
-      background:
-        radial-gradient(700px 240px at 50% 18%, rgba(255,205,94,.30), transparent 60%),
-        radial-gradient(900px 320px at 70% 22%, rgba(255,94,186,.22), transparent 65%),
-        linear-gradient(180deg, rgba(94,203,255,.18), rgba(255,255,255,.05) 40%, rgba(0,0,0,.18) 100%);
-      position: relative;
-      padding: 12px;
-    }
-    .skyArt::after{
-      content:"";
-      position:absolute; left:-10%; right:-10%; bottom:-6px; height: 52%;
-      background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.35) 40%, rgba(0,0,0,.65));
-      pointer-events:none;
-    }
-    .skyHorizon{
-      position:absolute; left:0; right:0; bottom:0;
-      height: 40%;
-      background:
-        linear-gradient(180deg, rgba(10,12,30,0), rgba(10,12,30,.50) 55%, rgba(0,0,0,.70));
-      pointer-events:none;
-    }
-    .skylineRow{
-      position: relative;
-      z-index: 2;
-      display:flex;
-      align-items:flex-end;
-      gap: 6px;
-      height: 58px;
-      margin-top: 8px;
-    }
-    .bldg{
-      width: 14px;
-      border-radius: 6px 6px 3px 3px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.35);
-      box-shadow: 0 10px 24px rgba(0,0,0,.35);
-      position: relative;
-      overflow:hidden;
-    }
-    .bldg::before{
-      content:"";
-      position:absolute; inset:0;
-      background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,0));
-      opacity:.55;
-    }
-    .bldg::after{
-      content:"";
-      position:absolute; left:2px; right:2px; top:6px; bottom:6px;
-      background:
-        repeating-linear-gradient(90deg, rgba(255,206,94,.35) 0 2px, transparent 2px 6px);
-      opacity:.22;
-    }
-    .bldg.tall{ width: 16px; }
-    .bldg.wide{ width: 22px; }
-
-    .meterWrap{
-      margin-top: 10px;
-      display:flex;
-      align-items:center;
-      gap: 10px;
-      flex-wrap:wrap;
-    }
-    .meter{
-      flex: 1 1 240px;
-      height: 10px;
-      border-radius: 999px;
-      background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.12);
-      overflow:hidden;
-    }
-    .meter > div{
-      height: 100%;
-      width: 0%;
-      background: rgba(94,203,255,.45);
-      box-shadow: 0 0 18px rgba(94,203,255,.25);
-    }
-    .meterLabel{ font-size: 12px; opacity:.86; }
-
-    .board{
-      border-radius: 18px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.04);
-      padding: 12px;
-    }
-    .grid{
-      display:grid;
-      grid-template-columns: repeat(10, minmax(0,1fr));
-      gap: 8px;
-    }
-    @media (max-width: 820px){ .grid{ grid-template-columns: repeat(8, minmax(0,1fr)); } }
-    @media (max-width: 520px){ .grid{ grid-template-columns: repeat(6, minmax(0,1fr)); } }
-
-    .tile{
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.06);
-      min-height: 62px;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      cursor:pointer; user-select:none;
-      transition: transform .06s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
-      position: relative;
-      overflow:hidden;
-    }
-    .tile:hover{ background: rgba(255,255,255,.09); }
-    .tile:active{ transform: translateY(1px) scale(.99); }
-
-    .tile.bad{
-      border-color: rgba(255,94,94,.45);
-      box-shadow: 0 0 0 3px rgba(255,94,94,.10);
-    }
-    .tile.good{
-      border-color: rgba(124,255,170,.35);
-      box-shadow: 0 0 0 3px rgba(124,255,170,.08);
-    }
-
-    .tile.preview{
-      border-color: rgba(94,203,255,.45);
-      box-shadow: 0 0 0 3px rgba(94,203,255,.10);
-    }
-    .tile.preview::after{
-      content:"";
-      position:absolute; inset:-2px;
-      background: radial-gradient(250px 140px at 50% 50%, rgba(94,203,255,.20), transparent 60%);
-      opacity:.95;
-      pointer-events:none;
-    }
-
-    .tile .e{ font-size: 22px; }
-    .tile .s{ font-size: 10px; opacity:.80; margin-top: 2px; text-align:center; padding: 0 4px; min-height: 14px; }
-    .tile .u{
-      position:absolute; top:6px; right:6px;
-      display:flex; gap: 4px;
-      font-size: 12px;
-      opacity:.95;
-      filter: drop-shadow(0 8px 14px rgba(0,0,0,.35));
-    }
-    .tag{
-      background: rgba(0,0,0,.35);
-      border: 1px solid rgba(255,255,255,.14);
-      border-radius: 999px;
-      padding: 1px 6px;
-      line-height: 1.4;
-    }
-
-    .tile.flash::before{
-      content:"";
-      position:absolute; inset:-2px;
-      background: radial-gradient(250px 140px at 50% 50%, rgba(94,203,255,.30), transparent 60%);
-      opacity:.0;
-      animation: flash .42s ease;
-      pointer-events:none;
-    }
-    @keyframes flash { 0%{opacity:0} 25%{opacity:1} 100%{opacity:0} }
-
-    .panelSmall{ font-size: 12px; opacity:.86; line-height: 1.35; }
-    .footer{
-      margin-top: 14px;
-      font-size: 12px;
-      opacity: .75;
-      display:flex;
-      gap: 10px;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    .toast{
-      position: fixed;
-      left: 50%;
-      transform: translateX(-50%);
-      bottom: 16px;
-      background: rgba(0,0,0,.65);
-      border: 1px solid rgba(255,255,255,.16);
-      border-radius: 999px;
-      padding: 10px 14px;
-      font-size: 13px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .2s ease, transform .2s ease;
-      max-width: 92vw;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      z-index: 50;
-    }
-    .toast.show{ opacity: 1; transform: translateX(-50%) translateY(-4px); }
-
-    /* Modal */
-    .modalBackdrop{
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.55);
-      display:flex; align-items:center; justify-content:center;
-      padding: 18px;
-      z-index: 100;
-    }
-    .modal{
-      width: min(920px, 96vw);
-      border-radius: 18px;
-      border: 1px solid rgba(255,255,255,.16);
-      background:
-        radial-gradient(900px 450px at 25% 0%, rgba(94,203,255,.18), transparent 55%),
-        radial-gradient(900px 450px at 75% 10%, rgba(186,94,255,.14), transparent 55%),
-        rgba(11,18,32,.95);
-      box-shadow: 0 25px 70px rgba(0,0,0,.55);
-      overflow:hidden;
-    }
-    .modalHeader{
-      padding: 16px;
-      border-bottom: 1px solid rgba(255,255,255,.10);
-      display:flex; align-items:flex-start; justify-content:space-between; gap: 12px;
-    }
-    .modalHeader h3{ margin:0; font-size: 16px; letter-spacing:.2px; }
-    .modalBody{ padding: 16px; }
-    .modalGrid{
-      display:grid; gap: 12px;
-      grid-template-columns: 1.2fr .8fr;
-    }
-    @media (max-width: 860px){ .modalGrid{ grid-template-columns: 1fr; } }
-    .step{
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 16px;
-      padding: 12px;
-    }
-    .step .title{ font-weight: 1000; margin-bottom: 6px; }
-    .step .text{ font-size: 12px; opacity:.88; line-height: 1.42; }
-    .modalFooter{
-      padding: 16px;
-      border-top: 1px solid rgba(255,255,255,.10);
-      display:flex; align-items:center; justify-content:space-between; gap: 10px;
-      flex-wrap:wrap;
-    }
-  `;
-  document.head.appendChild(style);
-
-  // -------------------- Helpers --------------------
-  const now = () => Date.now();
-  const SAVE_KEY = "flipcity_builder_v72";
-  const COLLECT_MIN = 10;        // percent
-  const COLLECT_COOLDOWN = 800;  // ms
-
-  const fmt = (n) => {
-    if (!Number.isFinite(n)) return "∞";
-    const abs = Math.abs(n);
-    if (abs < 1000) return n.toFixed(0);
-    const units = ["K","M","B","T","Qa","Qi","Sx","Sp","Oc","No","Dc"];
-    let u = -1, v = abs;
-    while (v >= 1000 && u < units.length - 1) { v /= 1000; u++; }
-    const sign = n < 0 ? "-" : "";
-    return `${sign}${v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2)}${units[u]}`;
-  };
-
-  const toast = (msg) => {
-    const el = document.getElementById("toast");
-    if (!el) return;
-    el.textContent = msg;
-    el.classList.add("show");
-    clearTimeout(toast._t);
-    toast._t = setTimeout(() => el.classList.remove("show"), 1400);
-  };
-
-  const safeParse = (s, fallback) => { try { return JSON.parse(s); } catch { return fallback; } };
-  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
-
-  // -------------------- World config --------------------
-  const W = 10, H = 8;
-  const MAX_LVL = 5;
-
-  const EMPTY = "empty";
-  const TYPES = {
-    empty: { key:"empty", name:"Empty", icon:"⬜", cost:0, baseP:0, baseT:0, info:"Open land." },
-
-    road:  { key:"road",  name:"Road",  icon:"🛣️", cost:10,  baseP:0,    baseT:0,    info:"Boosts Shops & Factories nearby." },
-    power: { key:"power", name:"Power Plant", icon:"⚡", cost:120, baseP:0.4,  baseT:0,    info:"Provides POWER coverage." },
-    water: { key:"water", name:"Water Tower", icon:"💧", cost:95,  baseP:0.25, baseT:0,    info:"Provides WATER coverage." },
-
-    house: { key:"house", name:"House", icon:"🏠", cost:18,  baseP:0.55, baseT:0,    info:"Passive income. Likes Parks & Utilities." },
-    shop:  { key:"shop",  name:"Shop",  icon:"🏪", cost:40,  baseP:0.10, baseT:0.55, info:"Generates Activity + revenue." },
-    fact:  { key:"fact",  name:"Factory", icon:"🏭", cost:95, baseP:2.10, baseT:0.10, info:"Big passive. Likes Roads & Utilities; hates Parks." },
-
-    park:  { key:"park",  name:"Park",  icon:"🌳", cost:22,  baseP:0,    baseT:0,    info:"Boosts nearby Houses & Shops." },
-  };
-
-  const BUILD_MENU = ["house","shop","fact","park","road","power","water","upgrade","repair","bulldoze"];
-
-  const EVENTS = [
-    { id:"festival", name:"City Festival 🎉", desc:"+50% Activity for 40s", dur:40_000, actMult:1.5, passMult:1.0 },
-    { id:"boom",     name:"Construction Boom 🏗️", desc:"+50% Passive for 40s", dur:40_000, actMult:1.0, passMult:1.5 },
-    { id:"fire",     name:"Fire 🔥", desc:"A random building catches fire (repair it)", dur:0, fire:true }
-  ];
-
-  // -------------------- State --------------------
-  const state = {
-    cash: 65,
-    totalEarned: 0,
-    lastTickAt: now(),
-    lastSaveAt: 0,
-
-    board: Array.from({ length: W*H }, () => ({ type: EMPTY, lvl: 0, fire: false })),
-
-    tool: "house",
-    hoverIndex: null,
-
-    up: { zoning: 0, efficiency: 0, commerce: 0, logistics: 0, parks: 0 },
-
-    undo: [],
-    missionIndex: 0,
-
-    activity: 0,
-    lastCollectAt: 0,
-
-    event: { active: null, nextAt: now() + 35_000 },
-
-    seenIntro: false
-  };
-
-  // -------------------- Missions --------------------
-  const MISSIONS = [
-    { id:"m1", title:"Lay foundations", desc:"Build 4 Houses.", check: () => countType("house") >= 4 },
-    { id:"m2", title:"Green spaces", desc:"Build 2 Parks near Houses.", check: () => parksNearHouses() >= 2 },
-    { id:"m3", title:"Turn on utilities", desc:"Build 1 Power Plant ⚡ and 1 Water Tower 💧.", check: () => countType("power")>=1 && countType("water")>=1 },
-    { id:"m4", title:"Connect commerce", desc:"Build 2 Roads and 2 Shops.", check: () => countType("road")>=2 && countType("shop")>=2 },
-    { id:"m5", title:"Industrial zone", desc:"Build 1 Factory 🏭 and keep it away from Parks.", check: () => countType("fact")>=1 && factoryParkConflicts() === 0 },
-    { id:"m6", title:"Upgrade a building", desc:"Upgrade any building to Level 3.", check: () => maxLevelAny() >= 3 },
-    { id:"m7", title:"City in motion", desc:"Reach $500 total earned.", check: () => state.totalEarned >= 500 },
-  ];
-
-  // -------------------- Upgrade effects --------------------
-  const zoningMult = () => 1 + state.up.zoning * 0.08;
-  const costMult = () => 1 - Math.min(0.45, state.up.efficiency * 0.05);
-  const roadPower = () => 1 + state.up.logistics * 0.10;
-  const parkPower = () => 1 + state.up.parks * 0.12;
-  const shopMult = () => 1 + state.up.commerce * 0.12;
-
-  const powerRadius = () => 3 + Math.floor(state.up.logistics / 4);
-  const waterRadius = () => 3 + Math.floor(state.up.parks / 4);
-
-  // -------------------- Geometry --------------------
-  const idx = (x,y) => y*W + x;
-  const xy = (i) => [i % W, Math.floor(i / W)];
-  const inBounds = (x,y) => x>=0 && y>=0 && x<W && y<H;
-
-  function neighbors4(x,y){
-    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
-    const out = [];
-    for (const [dx,dy] of dirs){
-      const nx=x+dx, ny=y+dy;
-      if (inBounds(nx,ny)) out.push([nx,ny]);
-    }
-    return out;
+const state = {
+  coins: 50,
+  cols: 5,
+  tiles: [], // {tier:0..}
+  selected: null, // index
+  upgrades: {
+    incomeMult: 1.0,
+    costDiscount: 0.0,
+    spawnDiscount: 0.0,
+    offlineMult: 1.0,
+    collectBonus: 0.0,
+    prestigeMult: 1.0
+  },
+  prestige: {
+    points: 0, // permanent “prestige”
+  },
+  settings: {
+    sound: true,
+    reducedMotion: false,
+    offlineEarnings: true
+  },
+  meta: {
+    lastSeen: Date.now(),
+    lastDaily: 0,
+    mergesTotal: 0,
+    highestTier: 0,
+    achievements: {} // id -> true
   }
-  function neighbors8(x,y){
-    const out = [];
-    for (let dy=-1; dy<=1; dy++) for (let dx=-1; dx<=1; dx++){
-      if (dx===0 && dy===0) continue;
-      const nx=x+dx, ny=y+dy;
-      if (inBounds(nx,ny)) out.push([nx,ny]);
-    }
-    return out;
+};
+
+/* ---------- helpers ---------- */
+function gridSize(){ return state.cols * state.cols; }
+function makeTiles(cols){
+  return Array.from({ length: cols*cols }, () => ({ tier: 0 }));
+}
+function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+/* ---------- audio (WebAudio) ---------- */
+let audioCtx = null;
+function ensureAudio(){
+  if(!state.settings.sound) return null;
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function blip(kind="tap"){
+  if(!state.settings.sound) return;
+  const ctx = ensureAudio();
+  if(!ctx) return;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  const now = ctx.currentTime;
+
+  const f = {
+    tap: 520,
+    place: 640,
+    merge: 740,
+    buy: 620,
+    fail: 220,
+    daily: 880,
+    prestige: 460
+  }[kind] || 520;
+
+  o.type = (kind === "fail") ? "triangle" : "sine";
+  o.frequency.setValueAtTime(f, now);
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.06, now + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.10);
+
+  o.connect(g); g.connect(ctx.destination);
+  o.start(now);
+  o.stop(now + 0.11);
+}
+
+/* ---------- economy ---------- */
+function tierInfo(tier){
+  if(tier <= 0) return { name:"Empty", icon:"➕" };
+  const b = BUILDINGS[Math.min(tier-1, BUILDINGS.length-1)];
+  return b;
+}
+
+function incomePerSecTier(tier){
+  if(tier <= 0) return 0;
+  const b = BUILDINGS[Math.min(tier-1, BUILDINGS.length-1)];
+  const growth = 1 + (tier-1)*0.55;
+  const prestigeBoost = state.upgrades.prestigeMult * (1 + state.prestige.points*0.02);
+  return b.baseIncome * growth * state.upgrades.incomeMult * prestigeBoost;
+}
+
+function totalIPS(){
+  return state.tiles.reduce((s,t)=> s + incomePerSecTier(t.tier), 0);
+}
+
+/* placing cost */
+function placeCost(){
+  const base = 20;
+  const scaled = base * (1 + state.meta.highestTier*0.12);
+  const discounted = scaled * (1 - state.upgrades.spawnDiscount) * (1 - state.upgrades.costDiscount*0.6);
+  return Math.max(5, Math.floor(discounted));
+}
+
+/* ---------- UI ---------- */
+function showToast(msg){
+  const el = $("#toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=> el.classList.remove("show"), 1400);
+}
+function showFeedback(title, text){
+  $("#feedbackTitle").textContent = title;
+  $("#feedbackText").textContent = text;
+  $("#feedback").classList.add("show");
+  $("#feedback").setAttribute("aria-hidden","false");
+}
+function hideFeedback(){
+  $("#feedback").classList.remove("show");
+  $("#feedback").setAttribute("aria-hidden","true");
+}
+function openModal(id){
+  const el = $(id);
+  el.classList.add("show");
+  el.setAttribute("aria-hidden","false");
+}
+function closeModal(id){
+  const el = $(id);
+  el.classList.remove("show");
+  el.setAttribute("aria-hidden","true");
+}
+function setSelected(idx){
+  state.selected = idx;
+  const t = idx == null ? null : state.tiles[idx];
+  $("#selectedChip").textContent = idx == null
+    ? "Selected: None"
+    : `Selected: ${tierInfo(t.tier).icon} ${tierInfo(t.tier).name} (Tier ${t.tier})`;
+}
+
+/* ---------- save/load ---------- */
+function saveSettings(){
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
+}
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if(!raw) return;
+    const s = JSON.parse(raw);
+    if(typeof s.sound === "boolean") state.settings.sound = s.sound;
+    if(typeof s.reducedMotion === "boolean") state.settings.reducedMotion = s.reducedMotion;
+    if(typeof s.offlineEarnings === "boolean") state.settings.offlineEarnings = s.offlineEarnings;
+  }catch(e){}
+}
+function applySettings(){
+  $("#toggleSound").checked = state.settings.sound;
+  $("#toggleMotion").checked = state.settings.reducedMotion;
+  $("#toggleOffline").checked = state.settings.offlineEarnings;
+  document.body.classList.toggle("reduced-motion", state.settings.reducedMotion);
+}
+function saveGame(show=true){
+  state.meta.lastSeen = Date.now();
+  localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  if(show){
+    showFeedback("Saved", "Your city is safely stored on this device.");
+    blip("tap");
   }
-  function manhattan(a,b){
-    const [ax,ay]=a, [bx,by]=b;
-    return Math.abs(ax-bx)+Math.abs(ay-by);
-  }
-
-  // -------------------- Counters --------------------
-  function countType(type){
-    let c=0;
-    for (const t of state.board) if (t.type===type) c++;
-    return c;
-  }
-  function maxLevelAny(){
-    let m=0;
-    for (const t of state.board) if (t.type!==EMPTY) m=Math.max(m,t.lvl);
-    return m;
-  }
-  function parksNearHouses(){
-    let c=0;
-    for (let i=0;i<state.board.length;i++){
-      if (state.board[i].type!=="park") continue;
-      const [x,y]=xy(i);
-      const near = neighbors8(x,y).some(([nx,ny]) => state.board[idx(nx,ny)].type==="house");
-      if (near) c++;
-    }
-    return c;
-  }
-  function factoryParkConflicts(){
-    let c=0;
-    for (let i=0;i<state.board.length;i++){
-      if (state.board[i].type!=="fact") continue;
-      const [x,y]=xy(i);
-      const bad = neighbors8(x,y).some(([nx,ny]) => state.board[idx(nx,ny)].type==="park");
-      if (bad) c++;
-    }
-    return c;
-  }
-
-  // -------------------- Costs --------------------
-  function buildingCost(typeKey){
-    const t = TYPES[typeKey];
-    if (!t) return 0;
-    return Math.ceil(t.cost * costMult());
-  }
-  function upgradeCost(tile){
-    if (!tile || tile.type===EMPTY) return 0;
-    const base = Math.max(10, buildingCost(tile.type));
-    return Math.ceil((base * 0.55) * Math.pow(1.55, tile.lvl));
-  }
-  function repairCost(tile){
-    if (!tile.fire) return 0;
-    const base = Math.max(8, buildingCost(tile.type));
-    return Math.ceil(base * 0.25 + tile.lvl * 6);
-  }
-  function bulldozeRefund(tile){
-    if (!tile || tile.type===EMPTY) return 0;
-    const base = buildingCost(tile.type);
-    return Math.floor(base * (0.30 + tile.lvl * 0.04));
-  }
-  function cheapestBuildCost(){
-    return Math.min(buildingCost("house"), buildingCost("park"), buildingCost("road"));
-  }
-
-  // -------------------- Utilities coverage --------------------
-  function hasUtilityAt(x,y, utilType){
-    const r = utilType==="power" ? powerRadius() : waterRadius();
-    const here = [x,y];
-    for (let i=0;i<state.board.length;i++){
-      const t = state.board[i];
-      if (t.type !== utilType) continue;
-      const [ux,uy]=xy(i);
-      if (manhattan(here, [ux,uy]) <= r) return true;
-    }
-    return false;
-  }
-
-  // -------------------- Yields --------------------
-  function computeTileYield(x,y){
-    const tile = state.board[idx(x,y)];
-    if (!tile || tile.type===EMPTY) return { passive:0, tap:0, activity:0, mood:"", needs:"" };
-
-    const meta = TYPES[tile.type];
-    let passive = meta.baseP || 0;
-    let tap = meta.baseT || 0;
-
-    if (tile.fire){
-      return { passive:0, tap:0, activity:0, mood:"🔥 On fire", needs:"Repair" };
-    }
-
-    const lvlMult = 1 + tile.lvl * 0.35;
-
-    let parks=0, roads4=0, houses8=0;
-    for (const [nx,ny] of neighbors8(x,y)){
-      const nt = state.board[idx(nx,ny)].type;
-      if (nt==="park") parks++;
-      if (nt==="house") houses8++;
-    }
-    for (const [nx,ny] of neighbors4(x,y)){
-      const nt = state.board[idx(nx,ny)].type;
-      if (nt==="road") roads4++;
-    }
-
-    const needsPower = (tile.type==="house" || tile.type==="shop" || tile.type==="fact");
-    const needsWater = (tile.type==="house" || tile.type==="fact");
-    const hasPower = !needsPower || hasUtilityAt(x,y,"power");
-    const hasWater = !needsWater || hasUtilityAt(x,y,"water");
-
-    let utilityMult = 1;
-    let needs = [];
-    if (!hasPower){ utilityMult *= 0.55; needs.push("⚡"); }
-    if (!hasWater){ utilityMult *= 0.65; needs.push("💧"); }
-
-    const mood = [];
-    if (tile.type==="house" || tile.type==="shop"){
-      const pBonus = 1 + parks * 0.08 * parkPower();
-      passive *= pBonus;
-      tap *= pBonus;
-      if (parks>0) mood.push("+Parks");
-    }
-    if (tile.type==="shop" || tile.type==="fact"){
-      const rBonus = 1 + roads4 * 0.12 * roadPower();
-      passive *= rBonus;
-      tap *= rBonus;
-      if (roads4>0) mood.push("+Roads");
-    }
-    if (tile.type==="shop"){
-      const hBonus = 1 + houses8 * 0.03;
-      tap *= hBonus;
-      if (houses8>0) mood.push("+Houses");
-      tap *= shopMult();
-    }
-    if (tile.type==="fact" && parks>0){
-      const penaltyPerPark = Math.max(0.015, 0.055 - state.up.parks * 0.007);
-      const pen = 1 - parks * penaltyPerPark;
-      passive *= Math.max(0.55, pen);
-      mood.push("-Parks");
-    }
-
-    passive *= lvlMult * utilityMult * zoningMult();
-    tap *= lvlMult * utilityMult * zoningMult();
-
-    // Activity generation (earned collect)
-    let activity = 0;
-    if (tile.type === "shop") activity = (0.55 + tap * 0.65);
-    else if (tile.type === "road") activity = 0.06;
-    else if (tile.type === "house") activity = 0.08;
-
-    return { passive, tap, activity, mood: mood.join(" "), needs: needs.length ? `Needs ${needs.join("")}` : "" };
-  }
-
-  function currentEventMults(){
-    if (!state.event.active) return { actMult:1, passMult:1 };
-    return { actMult: state.event.active.actMult, passMult: state.event.active.passMult };
-  }
-
-  function totals(){
-    let passive=0, tap=0, activityRate=0;
-    for (let y=0;y<H;y++) for (let x=0;x<W;x++){
-      const yld = computeTileYield(x,y);
-      passive += yld.passive;
-      tap += yld.tap;
-      activityRate += yld.activity;
-    }
-    passive += 0.05; // tiny stipend so game never hard-locks
-
-    const ev = currentEventMults();
-    passive *= ev.passMult;
-    activityRate *= ev.actMult;
-
-    return { passive, tap, activityRate };
-  }
-
-  // -------------------- Skyline --------------------
-  function skylineString(){
-    const counts = { house:0, shop:0, fact:0, park:0, road:0, power:0, water:0 };
-    let totalBuildings = 0;
-    let levelSum = 0;
-
-    for (const t of state.board){
-      if (counts[t.type] !== undefined) counts[t.type]++;
-      if (t.type !== EMPTY){
-        if (t.type !== "road" && t.type !== "park") totalBuildings++;
-        levelSum += t.lvl || 0;
-      }
-    }
-
-    if (counts.house + counts.shop + counts.fact + counts.power + counts.water === 0) {
-      return "⬜ ⬜ ⬜ 🏗️ ⬜ ⬜ ⬜";
-    }
-
-    const maturity = totalBuildings + Math.floor(levelSum / 3);
-    const stage =
-      maturity < 5  ? 0 :
-      maturity < 10 ? 1 :
-      maturity < 18 ? 2 :
-      maturity < 28 ? 3 : 4;
-
-    let skyline = [];
-    const push = (icon, n) => { for (let i=0;i<n;i++) skyline.push(icon); };
-
-    push("🏠", Math.min(6, counts.house));
-    push("🏪", Math.min(4, counts.shop));
-    push("🏭", Math.min(3, counts.fact));
-    push("⚡", Math.min(2, counts.power));
-    push("💧", Math.min(2, counts.water));
-    push("🌳", Math.min(3, counts.park));
-
-    if (stage >= 1) skyline = skyline.map(i => i === "🏠" ? "🏡" : i);
-    if (stage >= 2) skyline = skyline.map(i => i === "🏡" ? "🏢" : i);
-    if (stage >= 3) skyline = skyline.map(i => (i === "🏢" ? "🏙️" : (i === "🏪" ? "🏬" : i)));
-    if (stage >= 4) { skyline = skyline.map(i => (i === "🏙️" ? "🌆" : i)); skyline.push("✨"); }
-
-    while (skyline.length < 12) skyline.push("⬜");
-    return skyline.slice(0, 12).join(" ");
-  }
-
-  function skylineBarsHtml(){
-    const c = {
-      house: countType("house"),
-      shop: countType("shop"),
-      fact: countType("fact"),
-      power: countType("power"),
-      water: countType("water"),
-    };
-
-    const bars = [];
-    const push = (n, h, cls="") => {
-      for (let i=0;i<n;i++){
-        const height = Math.max(10, Math.min(58, h + (i%3)*6));
-        bars.push(`<div class="bldg ${cls}" style="height:${height}px"></div>`);
-      }
-    };
-
-    push(Math.min(10, c.house), 18, "");
-    push(Math.min(6,  c.shop),  28, "wide");
-    push(Math.min(4,  c.power), 34, "tall");
-    push(Math.min(4,  c.water), 32, "tall");
-    push(Math.min(4,  c.fact),  48, "tall");
-
-    if (!bars.length) push(6, 14, "");
-
-    return bars.slice(0, 18).join("");
-  }
-
-  // -------------------- Undo --------------------
-  function pushUndo(){
-    const snap = {
-      cash: state.cash,
-      totalEarned: state.totalEarned,
-      board: state.board.map(t => ({ type:t.type, lvl:t.lvl, fire:!!t.fire })),
-      missionIndex: state.missionIndex,
-      eventActive: state.event.active ? { ...state.event.active } : null,
-      tool: state.tool,
-      activity: state.activity
-    };
-    state.undo.push(snap);
-    if (state.undo.length > 30) state.undo.shift();
-  }
-
-  function doUndo(){
-    const snap = state.undo.pop();
-    if (!snap) return toast("Nothing to undo.");
-    state.cash = snap.cash;
-    state.totalEarned = snap.totalEarned;
-    state.board = snap.board.map(t => ({ type:t.type, lvl:t.lvl, fire:!!t.fire }));
-    state.missionIndex = snap.missionIndex;
-    state.event.active = snap.eventActive;
-    state.tool = BUILD_MENU.includes(snap.tool) ? snap.tool : "house";
-    state.activity = clamp(Number(snap.activity ?? 0) || 0, 0, 100);
-    toast("↩️ Undid last action");
-    render();
-    save();
-  }
-
-  // -------------------- Missions --------------------
-  function nextMissionIfComplete(){
-    let progressed = false;
-    while (state.missionIndex < MISSIONS.length && MISSIONS[state.missionIndex].check()){
-      state.missionIndex++;
-      progressed = true;
-    }
-    if (progressed) toast("✅ Mission complete!");
-  }
-
-  // -------------------- Events --------------------
-  function tickEvents(){
-    if (state.event.active && now() >= state.event.active.endsAt){
-      state.event.active = null;
-      toast("⏱️ Event ended");
-    }
-    if (now() < state.event.nextAt) return;
-
-    state.event.nextAt = now() + (35_000 + Math.random() * 40_000);
-
-    const built = state.board.filter(t => t.type !== EMPTY).length;
-    const chance = clamp(0.28 + built * 0.004, 0.28, 0.60);
-    if (Math.random() > chance) return;
-
-    const e = EVENTS[Math.floor(Math.random() * EVENTS.length)];
-
-    if (e.fire){
-      const candidates = [];
-      for (let i=0;i<state.board.length;i++){
-        const t = state.board[i];
-        if (t.type===EMPTY) continue;
-        if (t.type==="road" || t.type==="park" || t.type==="power" || t.type==="water") continue;
-        if (t.fire) continue;
-        candidates.push(i);
-      }
-      if (!candidates.length) return;
-      const pick = candidates[Math.floor(Math.random() * candidates.length)];
-      state.board[pick].fire = true;
-      toast("🔥 Fire! Select Repair and click the burning building.");
-      render();
-      return;
-    }
-
-    state.event.active = {
-      id: e.id,
-      name: e.name,
-      desc: e.desc,
-      actMult: e.actMult,
-      passMult: e.passMult,
-      endsAt: now() + e.dur
-    };
-    toast(`🎲 Event: ${e.name}`);
-    render();
-  }
-
-  // -------------------- Guidance --------------------
-  function guidance(){
-    const cash = state.cash;
-    const houses = countType("house");
-    const shops = countType("shop");
-    const roads = countType("road");
-    const power = countType("power");
-    const water = countType("water");
-    const factories = countType("fact");
-    const cheapest = cheapestBuildCost();
-    const anyFire = state.board.some(t => t.fire);
-
-    if (state.missionIndex < MISSIONS.length){
-      const m = MISSIONS[state.missionIndex];
-      const suggest =
-        m.id === "m1" ? "house" :
-        m.id === "m2" ? "park" :
-        m.id === "m3" ? (power === 0 ? "power" : "water") :
-        m.id === "m4" ? (roads < 2 ? "road" : "shop") :
-        m.id === "m5" ? "fact" :
-        m.id === "m6" ? "upgrade" : null;
-
-      return { text: `🎯 <b>${m.title}</b> — ${m.desc}`, suggest };
-    }
-
-    if (anyFire) return { text: `🧯 <b>What to do next:</b> A building is on fire — switch to <b>Repair</b> and click it.`, suggest: "repair" };
-
-    if (cash < cheapest){
-      if (state.activity >= COLLECT_MIN) return { text: `💰 <b>What to do next:</b> You’ve earned revenue — click <b>Collect Revenue</b>.`, suggest: null };
-      return { text: `⏳ <b>What to do next:</b> Wait a moment for <b>Passive</b> + <b>Activity</b> to accumulate. Build Shops to charge Activity faster.`, suggest: "shop" };
-    }
-
-    if (houses < 4) return { text: `🏠 <b>What to do next:</b> Build Houses first for passive income.`, suggest: "house" };
-    if (countType("park") < 1) return { text: `🌳 <b>What to do next:</b> Place a Park near Houses for bonuses.`, suggest: "park" };
-
-    if (power === 0) return { text: `⚡ <b>What to do next:</b> Build a Power Plant so buildings earn closer to full output.`, suggest: "power" };
-    if (water === 0) return { text: `💧 <b>What to do next:</b> Build a Water Tower so Houses/Factories earn closer to full output.`, suggest: "water" };
-
-    if (shops < 2) return { text: `🏪 <b>What to do next:</b> Build Shops — they charge <b>Activity</b> so you can collect revenue.`, suggest: "shop" };
-    if (roads < shops) return { text: `🛣️ <b>What to do next:</b> Add Roads next to Shops/Factories for stronger commerce.`, suggest: "road" };
-
-    if (factories < 1 && cash >= buildingCost("fact")) return { text: `🏭 <b>What to do next:</b> Add a Factory away from Parks for big passive income.`, suggest: "fact" };
-
-    if (maxLevelAny() < 2) return { text: `⬆️ <b>What to do next:</b> Use Upgrade on your best buildings to scale faster.`, suggest: "upgrade" };
-
-    if (state.activity < COLLECT_MIN) return { text: `📈 <b>What to do next:</b> Grow commerce (Shops + Roads) to charge Activity, then collect.`, suggest: "shop" };
-
-    return { text: `✅ <b>What to do next:</b> Optimize placement, upgrade key tiles, and collect revenue when Activity is charged.`, suggest: null };
-  }
-
-  // -------------------- Actions --------------------
-  function flashTile(i){
-    const el = document.querySelector(`[data-i="${i}"]`);
-    if (!el) return;
-    el.classList.remove("flash");
-    void el.offsetWidth;
-    el.classList.add("flash");
-  }
-
-  function tryActionOn(x,y){
-    const i = idx(x,y);
-    const tile = state.board[i];
-    const tool = state.tool;
-
-    if (tool === "bulldoze"){
-      if (tile.type===EMPTY) return toast("Nothing to bulldoze.");
-      pushUndo();
-      const refund = bulldozeRefund(tile);
-      state.board[i] = { type: EMPTY, lvl: 0, fire: false };
-      state.cash += refund;
-      toast(`Bulldozed (+$${fmt(refund)})`);
-      flashTile(i);
-      nextMissionIfComplete();
-      render(); save();
-      return;
-    }
-
-    if (tool === "repair"){
-      if (!tile.fire) return toast("That tile isn’t on fire.");
-      const cost = repairCost(tile);
-      if (state.cash < cost) return toast("Not enough cash to repair.");
-      pushUndo();
-      state.cash -= cost;
-      tile.fire = false;
-      toast(`Repaired (-$${fmt(cost)})`);
-      flashTile(i);
-      nextMissionIfComplete();
-      render(); save();
-      return;
-    }
-
-    if (tool === "upgrade"){
-      if (tile.type===EMPTY) return toast("Build something first.");
-      if (tile.fire) return toast("Repair it first.");
-      if (tile.lvl >= MAX_LVL) return toast("Max level reached.");
-      const cost = upgradeCost(tile);
-      if (state.cash < cost) return toast("Not enough cash to upgrade.");
-      pushUndo();
-      state.cash -= cost;
-      tile.lvl += 1;
-      toast(`Upgraded to Lv ${tile.lvl}`);
-      flashTile(i);
-      nextMissionIfComplete();
-      render(); save();
-      return;
-    }
-
-    const meta = TYPES[tool];
-    if (!meta) return;
-
-    if (tile.type !== EMPTY) return toast("Tile occupied. Use Bulldoze or Upgrade/Repair.");
-    const cost = buildingCost(tool);
-    if (state.cash < cost) return toast(`Not enough cash. Need $${fmt(cost)}.`);
-
-    pushUndo();
-    state.cash -= cost;
-    state.board[i] = { type: tool, lvl: 0, fire: false };
-
-    toast(tool === "shop" ? "Built: 🏪 Shop (Activity will fill faster)" : `Built: ${meta.icon} ${meta.name}`);
-    flashTile(i);
-    nextMissionIfComplete();
-    render(); save();
-  }
-
-  // -------------------- Activity / Revenue --------------------
-  function activityPerSecond(){
-    const t = totals();
-    return clamp(0.10 + t.activityRate * 0.60, 0, 18);
-  }
-
-  function collectRevenue(){
-    const t = totals();
-    const act = clamp(state.activity, 0, 100);
-
-    if (now() - state.lastCollectAt < COLLECT_COOLDOWN) return;
-    if (act < COLLECT_MIN) return toast("Not enough Activity yet.");
-
-    const capacity = (1 + t.tap);
-    const payout = capacity * (act / 100) * 12;
-
-    pushUndo();
-    state.cash += payout;
-    state.totalEarned += payout;
-
-    state.activity = 0;
-    state.lastCollectAt = now();
-
-    toast(`Collected revenue: +$${fmt(payout)}`);
-    nextMissionIfComplete();
-    render();
-    save();
-  }
-
-  // -------------------- Tick --------------------
-  function tick(){
-    const tNow = now();
-    const dt = (tNow - state.lastTickAt) / 1000;
-    state.lastTickAt = tNow;
-
-    const t = totals();
-    const gain = t.passive * dt;
-    if (gain > 0){
-      state.cash += gain;
-      state.totalEarned += gain;
-    }
-
-    state.activity = clamp(state.activity + activityPerSecond() * dt, 0, 100);
-    tickEvents();
-
-    if (tNow - state.lastSaveAt > 10_000) save();
-  }
-
-  // -------------------- Upgrades --------------------
-  function costUpgrade(key){
-    const lvl = state.up[key];
-    const base = { zoning: 140, efficiency: 160, commerce: 150, logistics: 170, parks: 145 }[key] || 150;
-    const growth = { zoning: 1.22, efficiency: 1.24, commerce: 1.23, logistics: 1.25, parks: 1.23 }[key] || 1.23;
-    return Math.ceil(base * Math.pow(growth, lvl) * (1 + lvl * 0.02));
-  }
-
-  function buyUpgrade(key){
-    const c = costUpgrade(key);
-    if (state.cash < c) return toast("Not enough cash.");
-    pushUndo();
-    state.cash -= c;
-    state.up[key] += 1;
-    toast("Upgrade purchased!");
-    nextMissionIfComplete();
-    render();
-    save();
-  }
-
-  // -------------------- Save / Load --------------------
-  function exportSave(){
-    const data = {
-      v: 72,
-      cash: state.cash,
-      totalEarned: state.totalEarned,
-      board: state.board,
-      tool: state.tool,
-      up: state.up,
-      missionIndex: state.missionIndex,
-      event: state.event,
-      seenIntro: state.seenIntro,
-      activity: state.activity
-    };
-    return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-  }
-
-  function importSave(code){
-    const json = decodeURIComponent(escape(atob(code.trim())));
-    const data = safeParse(json, null);
-    if (!data || (data.v !== 72 && data.v !== 71 && data.v !== 7)) throw new Error("Bad save");
-
-    state.cash = Number(data.cash ?? 0) || 0;
-    state.totalEarned = Number(data.totalEarned ?? 0) || 0;
-
-    if (Array.isArray(data.board) && data.board.length === W*H){
-      state.board = data.board.map(t => ({
-        type: TYPES[t.type]?.key ? t.type : EMPTY,
-        lvl: clamp(Number(t.lvl ?? 0) || 0, 0, MAX_LVL),
-        fire: !!t.fire
-      }));
-    }
-
-    state.tool = BUILD_MENU.includes(data.tool) ? data.tool : "house";
-
-    state.up = {
-      zoning: Math.max(0, Math.floor(Number(data.up?.zoning ?? 0) || 0)),
-      efficiency: Math.max(0, Math.floor(Number(data.up?.efficiency ?? 0) || 0)),
-      commerce: Math.max(0, Math.floor(Number(data.up?.commerce ?? 0) || 0)),
-      logistics: Math.max(0, Math.floor(Number(data.up?.logistics ?? 0) || 0)),
-      parks: Math.max(0, Math.floor(Number(data.up?.parks ?? 0) || 0)),
-    };
-
-    state.missionIndex = clamp(Number(data.missionIndex ?? 0) || 0, 0, MISSIONS.length);
-    state.event = data.event && typeof data.event === "object"
-      ? { active: data.event.active ?? null, nextAt: Number(data.event.nextAt ?? (now()+35_000)) || (now()+35_000) }
-      : { active: null, nextAt: now()+35_000 };
-
-    state.seenIntro = !!data.seenIntro;
-    state.activity = clamp(Number(data.activity ?? 0) || 0, 0, 100);
-    state.lastTickAt = now();
-  }
-
-  function save(){
-    localStorage.setItem(SAVE_KEY, exportSave());
-    state.lastSaveAt = now();
-  }
-  function load(){
+}
+function loadGame(){
+  try{
     const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return;
-    try { importSave(raw); } catch (e) { console.warn("Save load failed", e); }
-  }
-
-  // -------------------- UI helpers --------------------
-  function toolCard(key, suggestKey){
-    const sel = state.tool === key;
-    const suggest = suggestKey === key;
-
-    if (key === "upgrade"){
-      return `
-        <div class="tool ${sel ? "sel" : ""} ${suggest ? "suggest" : ""}" data-tool="upgrade">
-          <div class="icon">⬆️</div>
-          <div>
-            <div class="name">Upgrade</div>
-            <div class="info">Increase a building to Lv ${MAX_LVL}.</div>
-          </div>
-        </div>
-      `;
+    if(!raw){
+      state.tiles = makeTiles(state.cols);
+      return;
     }
-    if (key === "repair"){
-      return `
-        <div class="tool ${sel ? "sel" : ""} ${suggest ? "suggest" : ""}" data-tool="repair">
-          <div class="icon">🧯</div>
-          <div>
-            <div class="name">Repair</div>
-            <div class="info">Fix 🔥 fires so buildings work again.</div>
-          </div>
-        </div>
-      `;
+    const d = JSON.parse(raw);
+    if(typeof d === "object" && d){
+      // shallow merge known safe fields
+      state.coins = Number(d.coins ?? state.coins);
+      state.cols = [5,6].includes(d.cols) ? d.cols : state.cols;
+      state.tiles = Array.isArray(d.tiles) ? d.tiles : makeTiles(state.cols);
+      if(state.tiles.length !== gridSize()) state.tiles = makeTiles(state.cols);
+
+      state.upgrades = { ...state.upgrades, ...(d.upgrades||{}) };
+      state.prestige = { ...state.prestige, ...(d.prestige||{}) };
+      state.settings = { ...state.settings, ...(d.settings||{}) };
+      state.meta = { ...state.meta, ...(d.meta||{}) };
+
+      state.selected = null;
     }
-    if (key === "bulldoze"){
-      return `
-        <div class="tool ${sel ? "sel" : ""} ${suggest ? "suggest" : ""}" data-tool="bulldoze">
-          <div class="icon">🧹</div>
-          <div>
-            <div class="name">Bulldoze</div>
-            <div class="info">Clear a tile (refund varies by level).</div>
-          </div>
-        </div>
-      `;
-    }
+  }catch(e){
+    state.tiles = makeTiles(state.cols);
+  }
+}
+function resetGame(){
+  localStorage.removeItem(SAVE_KEY);
+  state.coins = 50;
+  state.cols = 5;
+  state.tiles = makeTiles(state.cols);
+  state.selected = null;
+  state.upgrades = {
+    incomeMult: 1.0,
+    costDiscount: 0.0,
+    spawnDiscount: 0.0,
+    offlineMult: 1.0,
+    collectBonus: 0.0,
+    prestigeMult: 1.0
+  };
+  state.prestige = { points: 0 };
+  state.meta = {
+    lastSeen: Date.now(),
+    lastDaily: 0,
+    mergesTotal: 0,
+    highestTier: 0,
+    achievements: {}
+  };
+  renderAll();
+  showFeedback("Reset", "Fresh start. Build something legendary.");
+  blip("tap");
+}
 
-    const t = TYPES[key];
-    const cost = buildingCost(key);
-    const afford = state.cash >= cost;
-    return `
-      <div class="tool ${sel ? "sel" : ""} ${suggest ? "suggest" : ""}" data-tool="${key}">
-        <div class="icon">${t.icon}</div>
-        <div>
-          <div class="name">${t.name} <span class="mono" style="opacity:.75;">$${fmt(cost)}</span></div>
-          <div class="info">${t.info}${afford ? "" : " · (Wait/collect for cash)"}</div>
-        </div>
-      </div>
-    `;
+/* ---------- offline earnings ---------- */
+function applyOfflineEarnings(){
+  if(!state.settings.offlineEarnings) return;
+
+  const now = Date.now();
+  const last = Number(state.meta.lastSeen || now);
+  const dt = clamp((now - last)/1000, 0, 60*60*12); // cap 12h
+
+  const ips = totalIPS();
+  const earned = Math.floor(ips * dt * state.upgrades.offlineMult);
+
+  state.meta.lastSeen = now;
+
+  if(earned > 0){
+    state.coins += earned;
+    showFeedback("Welcome back!", `You earned +${fmt(earned)} coins while away.`);
+    blip("daily");
+  }
+}
+
+/* ---------- gameplay: place/select/move/merge ---------- */
+function firstEmptyIndex(){
+  return state.tiles.findIndex(t => (t.tier||0) === 0);
+}
+
+function placeBuilding(){
+  const idx = firstEmptyIndex();
+  if(idx === -1){
+    showToast("No empty tiles!");
+    blip("fail");
+    return;
+  }
+  const cost = placeCost();
+  if(state.coins < cost){
+    showToast("Not enough coins to place");
+    blip("fail");
+    return;
+  }
+  state.coins -= cost;
+  state.tiles[idx].tier = 1;
+  state.meta.highestTier = Math.max(state.meta.highestTier, 1);
+  setSelected(idx);
+  showToast(`Placed 🏠 (Cost ${fmt(cost)})`);
+  blip("place");
+  pulseTile(idx);
+  renderAll();
+}
+
+function moveOrMerge(toIdx){
+  const fromIdx = state.selected;
+  if(fromIdx == null) return;
+
+  if(fromIdx === toIdx){
+    // deselect
+    setSelected(null);
+    renderAll();
+    return;
   }
 
-  function shopItem(title, desc, meta, cost, id, primary=false){
-    const can = state.cash >= cost;
-    return `
-      <div class="shopItem">
-        <div class="t">${title}</div>
-        <div class="d">${desc}</div>
-        <div class="b">
-          <div>
-            <div class="meta">${meta}</div>
-            <div class="meta">Cost: <b>$${fmt(cost)}</b></div>
-          </div>
-          <button class="btn ${primary && can ? "primary" : ""}" id="${id}">Buy</button>
-        </div>
-      </div>
-    `;
+  const from = state.tiles[fromIdx];
+  const to = state.tiles[toIdx];
+
+  if((from.tier||0) === 0){
+    setSelected(null);
+    renderAll();
+    return;
   }
 
-  function introModalHtml(){
-    if (state.seenIntro) return "";
-    return `
-      <div class="modalBackdrop">
-        <div class="modal">
-          <div class="modalHeader">
-            <div>
-              <h3>Welcome to Flip City — Builder Edition</h3>
-              <div class="sub">Revenue is earned via the <b>Activity</b> meter — build commerce to charge it, then collect.</div>
-            </div>
-            <button class="btn small ghost" id="btnCloseIntro">Close</button>
-          </div>
-
-          <div class="modalBody">
-            <div class="modalGrid">
-              <div class="step">
-                <div class="title">Core loop</div>
-                <div class="text">
-                  Build <b>Houses 🏠</b> + <b>Parks 🌳</b> →
-                  add <b>Utilities ⚡💧</b> →
-                  build <b>Shops 🏪</b> + <b>Roads 🛣️</b> to charge <b>Activity</b> →
-                  <b>Collect Revenue</b> →
-                  place <b>Factories 🏭</b> →
-                  <b>Upgrade ⬆️</b> to scale.
-                </div>
-              </div>
-              <div class="step">
-                <div class="title">Activity meter</div>
-                <div class="text">
-                  Activity fills automatically (mostly from Shops).<br>
-                  You can only collect when Activity is charged (no spam-clicking).
-                </div>
-              </div>
-
-              <div class="step">
-                <div class="title">Support</div>
-                <div class="text">
-                  Questions or bugs? Email:
-                  <br><b><a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></b>
-                </div>
-              </div>
-
-              <div class="step">
-                <div class="title">Disasters/events</div>
-                <div class="text">
-                  Fires 🔥 shut buildings down until repaired. Use the <b>Repair</b> tool.
-                  Events can boost Activity or Passive.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="modalFooter">
-            <span class="sub">Tip: hover a tile to preview your selected build.</span>
-            <button class="btn primary" id="btnStart">Start Building</button>
-          </div>
-        </div>
-      </div>
-    `;
+  // move to empty
+  if((to.tier||0) === 0){
+    to.tier = from.tier;
+    from.tier = 0;
+    setSelected(toIdx);
+    showToast("Moved");
+    blip("tap");
+    pulseTile(toIdx);
+    renderAll();
+    return;
   }
 
-  // -------------------- Render --------------------
-  function render(){
-    const t = totals();
-    const ev = state.event.active
-      ? `${state.event.active.name} (ends in ${Math.max(0, Math.ceil((state.event.active.endsAt - now())/1000))}s)`
-      : "No active event";
+  // merge if same tier
+  if(to.tier === from.tier){
+    to.tier += 1;
+    from.tier = 0;
+    state.meta.mergesTotal += 1;
+    state.meta.highestTier = Math.max(state.meta.highestTier, to.tier);
+    setSelected(toIdx);
+    showToast(`Merged → Tier ${to.tier}!`);
+    blip("merge");
+    pulseTile(toIdx);
+    checkAchievements();
+    renderAll();
+    return;
+  }
 
-    const g = guidance();
-    const suggestKey = g.suggest;
+  // otherwise change selection
+  setSelected(toIdx);
+  blip("tap");
+  renderAll();
+}
 
-    const actPct = clamp(state.activity, 0, 100);
-    const canCollect = actPct >= COLLECT_MIN;
-    const est = (1 + t.tap) * (actPct / 100) * 12;
+function onTileClick(idx){
+  ensureAudio(); // iOS unlock
 
-    root.innerHTML = `
-      <div class="wrap">
-        <div class="top">
-          <div>
-            <h1>Flip City</h1>
-            <div class="sub">Builder flow: Missions → Utilities → Commerce → Collect → Industry → Upgrades → Events.</div>
-          </div>
-          <div class="row">
-            <button class="btn small" id="btnHelp">Help</button>
-            <button class="btn small" id="btnUndo" ${state.undo.length ? "" : "disabled"}>Undo</button>
-            <button class="btn small" id="btnExport">Export</button>
-            <button class="btn small" id="btnImport">Import</button>
-            <button class="btn small danger" id="btnReset">Reset</button>
-          </div>
-        </div>
+  const t = state.tiles[idx];
 
-        <div class="row" style="margin-top:12px;">
-          <div class="card sky" style="flex:1 1 720px;">
-            <h2>Skyline Preview</h2>
-            <div class="skyArt">
-              <div class="skyline">${skylineString()}</div>
-              <div class="skylineRow">${skylineBarsHtml()}</div>
-              <div class="skyHorizon"></div>
-            </div>
-
-            <div class="hint">${g.text}</div>
-
-            <div class="meterWrap">
-              <div class="meter" title="Activity fills over time (mostly from Shops). Collect Revenue when charged.">
-                <div style="width:${actPct.toFixed(1)}%;"></div>
-              </div>
-              <div class="meterLabel">
-                Activity: <b class="mono">${actPct.toFixed(0)}%</b>
-                ${canCollect ? ` · Est. payout: <b class="mono">$${fmt(est)}</b>` : ` · Need <b>${COLLECT_MIN}%</b> to collect`}
-              </div>
-            </div>
-
-            <div class="row" style="margin-top:10px;">
-              <span class="pill">Cash: <b class="mono">$${fmt(state.cash)}</b></span>
-              <span class="pill">Passive/sec: <b class="mono">$${fmt(t.passive)}</b></span>
-              <span class="pill">Commerce (cap): <b class="mono">$${fmt(1 + t.tap)}</b></span>
-              <span class="pill">Event: <b>${ev}</b></span>
-              <span class="pill">⚡ radius: <b>${powerRadius()}</b> · 💧 radius: <b>${waterRadius()}</b></span>
-            </div>
-          </div>
-        </div>
-
-        <div class="grid2" style="margin-top:12px;">
-          <div class="card">
-            <h2>Stats</h2>
-            <div class="statsGrid">
-              <div class="stat"><div class="k">Cash</div><div class="v mono">$${fmt(state.cash)}</div></div>
-              <div class="stat"><div class="k">Total Earned</div><div class="v mono">$${fmt(state.totalEarned)}</div></div>
-              <div class="stat"><div class="k">Passive / sec</div><div class="v mono">$${fmt(t.passive)}</div></div>
-              <div class="stat"><div class="k">Activity Fill / sec</div><div class="v mono">${activityPerSecond().toFixed(2)}%</div></div>
-            </div>
-
-            <div class="hr"></div>
-
-            <button class="btn primary" id="btnCollect" ${canCollect ? "" : "disabled"}>
-              Collect Revenue (${actPct.toFixed(0)}%)
-            </button>
-
-            <div class="panelSmall" style="margin-top:10px;">
-              <b>Earn the collect:</b> Activity fills automatically (mostly from <b>Shops</b>).
-              Build <b>Shops + Roads</b> to charge faster, then collect a payout.
-            </div>
-
-            <div class="hr"></div>
-
-            <h2>Build Tools</h2>
-            <div class="buildBar">
-              ${BUILD_MENU.map(k => toolCard(k, suggestKey)).join("")}
-            </div>
-
-            <div class="hr"></div>
-
-            <h2>Missions</h2>
-            <div class="panelSmall">
-              ${state.missionIndex < MISSIONS.length
-                ? `<b>${MISSIONS[state.missionIndex].title}</b><br>${MISSIONS[state.missionIndex].desc}`
-                : `<b>All missions complete!</b><br>Keep optimizing adjacency + levels + utilities + revenue cycles.`}
-            </div>
-
-            <div class="footer">
-              <span>Support: <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></span>
-              <span>Flip City v7.2</span>
-            </div>
-          </div>
-
-          <div class="card">
-            <h2>City Grid</h2>
-            <div class="panelSmall">Hover to preview. Click to act. 🔥 buildings need Repair.</div>
-            <div class="board">
-              <div class="grid" id="grid"></div>
-            </div>
-
-            <div class="hr"></div>
-
-            <h2>Upgrades (5)</h2>
-            <div class="shop">
-              ${shopItem(
-                "Zoning Policy",
-                "All buildings earn more.",
-                `Level ${state.up.zoning} · ${(zoningMult()).toFixed(2)}× output`,
-                costUpgrade("zoning"),
-                "up_zoning",
-                true
-              )}
-              ${shopItem(
-                "Construction Efficiency",
-                "Build/upgrade costs less.",
-                `Level ${state.up.efficiency} · ${Math.round((1-costMult())*100)}% discount`,
-                costUpgrade("efficiency"),
-                "up_efficiency"
-              )}
-              ${shopItem(
-                "Commerce Boost",
-                "Shops earn more commerce capacity (revenue).",
-                `Level ${state.up.commerce} · ${(shopMult()).toFixed(2)}× shop power`,
-                costUpgrade("commerce"),
-                "up_commerce"
-              )}
-              ${shopItem(
-                "Logistics Network",
-                "Road adjacency stronger + ⚡ radius grows slowly.",
-                `Level ${state.up.logistics} · ${(roadPower()).toFixed(2)}× road effects`,
-                costUpgrade("logistics"),
-                "up_logistics"
-              )}
-              ${shopItem(
-                "Parks Department",
-                "Park adjacency stronger + 💧 radius grows slowly.",
-                `Level ${state.up.parks} · ${(parkPower()).toFixed(2)}× park effects`,
-                costUpgrade("parks"),
-                "up_parks"
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div id="toast" class="toast"></div>
-        ${introModalHtml()}
-      </div>
-    `;
-
-    // Tool select
-    document.querySelectorAll("[data-tool]").forEach(el => {
-      el.addEventListener("click", () => {
-        state.tool = el.getAttribute("data-tool");
-        render();
-      });
-    });
-
-    // Buttons
-    const btnCollect = document.getElementById("btnCollect");
-    if (btnCollect) btnCollect.onclick = collectRevenue;
-
-    document.getElementById("btnHelp").onclick = () => { state.seenIntro = false; render(); };
-    document.getElementById("btnUndo").onclick = doUndo;
-
-    document.getElementById("up_zoning").onclick = () => buyUpgrade("zoning");
-    document.getElementById("up_efficiency").onclick = () => buyUpgrade("efficiency");
-    document.getElementById("up_commerce").onclick = () => buyUpgrade("commerce");
-    document.getElementById("up_logistics").onclick = () => buyUpgrade("logistics");
-    document.getElementById("up_parks").onclick = () => buyUpgrade("parks");
-
-    document.getElementById("btnExport").onclick = () => {
-      const code = exportSave();
-      navigator.clipboard?.writeText(code).catch(() => {});
-      prompt("Copy your save code:", code);
-    };
-
-    document.getElementById("btnImport").onclick = () => {
-      const code = prompt("Paste your save code:");
-      if (!code) return;
-      try { importSave(code); save(); toast("✅ Save imported"); render(); }
-      catch { toast("❌ Import failed (wrong version?)"); }
-    };
-
-    document.getElementById("btnReset").onclick = () => {
-      const ok = confirm("Reset everything? (Export first if you want a backup.)");
-      if (!ok) return;
-      localStorage.removeItem(SAVE_KEY);
-      location.reload();
-    };
-
-    // Intro modal
-    const startBtn = document.getElementById("btnStart");
-    const closeBtn = document.getElementById("btnCloseIntro");
-    if (startBtn) startBtn.onclick = () => { state.seenIntro = true; save(); render(); };
-    if (closeBtn) closeBtn.onclick = () => { state.seenIntro = true; save(); render(); };
-
-    // Grid render
-    const grid = document.getElementById("grid");
-    const tool = state.tool;
-
-    for (let i=0;i<state.board.length;i++){
-      const tile = state.board[i];
-      const [x,y] = xy(i);
-      const yld = computeTileYield(x,y);
-
-      let cls = "tile";
-      const tags = [];
-
-      if (tile.fire) tags.push(`<span class="tag">🔥</span>`);
-      if (tile.type !== EMPTY) tags.push(`<span class="tag">Lv ${tile.lvl}</span>`);
-
-      if (yld.needs) {
-        if (yld.needs.includes("⚡")) tags.push(`<span class="tag">⚡</span>`);
-        if (yld.needs.includes("💧")) tags.push(`<span class="tag">💧</span>`);
+  // if nothing selected:
+  if(state.selected == null){
+    if((t.tier||0) === 0){
+      // quick place on empty tile by tapping it
+      const cost = placeCost();
+      if(state.coins < cost){
+        showToast("Not enough coins to place");
+        blip("fail");
+        return;
       }
-
-      if (state.hoverIndex === i) cls += " preview";
-
-      const isOccupied = tile.type !== EMPTY;
-      let canAct = true;
-      if (tool === "bulldoze") canAct = isOccupied;
-      else if (tool === "repair") canAct = !!tile.fire;
-      else if (tool === "upgrade") canAct = isOccupied && !tile.fire && tile.lvl < MAX_LVL;
-      else canAct = !isOccupied && state.cash >= buildingCost(tool);
-
-      cls += canAct ? " good" : " bad";
-
-      // hover-only preview icon
-      let icon = TYPES[tile.type]?.icon || "⬜";
-      if (tile.type === EMPTY && state.hoverIndex === i && TYPES[tool]) icon = TYPES[tool].icon;
-
-      const sub = tile.type === EMPTY ? "" : (yld.mood || yld.needs || "");
-
-      const div = document.createElement("div");
-      div.className = cls;
-      div.setAttribute("data-i", String(i));
-      div.title =
-        tile.type === EMPTY
-          ? (TYPES[tool] ? `Empty land • Place ${TYPES[tool].name} cost $${fmt(buildingCost(tool))}` : "Empty land")
-          : `${TYPES[tile.type].name} (Lv ${tile.lvl}) • Passive: $${fmt(yld.passive)}/sec • Commerce: $${fmt(yld.tap)} ${yld.needs ? "• "+yld.needs : ""}`;
-
-      div.innerHTML = `
-        <div class="u">${tags.join("")}</div>
-        <div class="e">${icon}</div>
-        <div class="s">${sub}</div>
-      `;
-
-      div.addEventListener("mouseenter", () => { state.hoverIndex = i; render(); });
-      div.addEventListener("mouseleave", () => { state.hoverIndex = null; render(); });
-      div.addEventListener("click", () => tryActionOn(x,y));
-
-      grid.appendChild(div);
+      state.coins -= cost;
+      t.tier = 1;
+      state.meta.highestTier = Math.max(state.meta.highestTier, 1);
+      setSelected(idx);
+      showToast(`Placed 🏠 (Cost ${fmt(cost)})`);
+      blip("place");
+      pulseTile(idx);
+      checkAchievements();
+      renderAll();
+      return;
     }
+    setSelected(idx);
+    blip("tap");
+    renderAll();
+    return;
   }
 
-  // -------------------- Boot --------------------
-  function fastForwardMissions(){
-    while (state.missionIndex < MISSIONS.length && MISSIONS[state.missionIndex].check()) state.missionIndex++;
+  // if selected exists, attempt move/merge/selection swap
+  moveOrMerge(idx);
+}
+
+function pulseTile(idx){
+  const el = document.querySelector(`[data-idx="${idx}"]`);
+  if(!el) return;
+  el.classList.remove("pulse");
+  void el.offsetWidth;
+  el.classList.add("pulse");
+}
+
+/* ---------- bonus buttons ---------- */
+function collectBonus(){
+  const ips = totalIPS();
+  const base = Math.max(10, Math.floor(ips * 2.75));
+  const extra = Math.floor(base * state.upgrades.collectBonus);
+  const total = base + extra;
+
+  state.coins += total;
+  showToast(`Collected +${fmt(total)}`);
+  blip("buy");
+  checkAchievements();
+  renderAll();
+}
+
+function autoMergeHint(){
+  // find any mergeable pair
+  const map = new Map(); // tier -> idx
+  for(let i=0;i<state.tiles.length;i++){
+    const tier = state.tiles[i].tier||0;
+    if(tier <= 0) continue;
+    if(map.has(tier)){
+      const a = map.get(tier);
+      showFeedback("Merge found!", `Try merging Tier ${tier} at tiles ${a+1} and ${i+1}.`);
+      blip("tap");
+      return;
+    }
+    map.set(tier, i);
+  }
+  showFeedback("No merges available", "Place more buildings or rearrange.");
+  blip("fail");
+}
+
+/* ---------- daily reward ---------- */
+function canClaimDaily(){
+  const last = Number(state.meta.lastDaily || 0);
+  const now = Date.now();
+  return (now - last) >= 1000*60*60*20; // 20h cooldown
+}
+function claimDaily(){
+  if(!canClaimDaily()){
+    showToast("Daily not ready yet");
+    blip("fail");
+    return;
+  }
+  const reward = Math.max(150, Math.floor(250 + totalIPS()*30));
+  state.coins += reward;
+  state.meta.lastDaily = Date.now();
+  showFeedback("Daily Reward!", `You got +${fmt(reward)} coins.`);
+  blip("daily");
+  checkAchievements();
+  renderAll();
+}
+
+/* ---------- prestige ---------- */
+function prestigeGainEstimate(){
+  // simple: based on coins earned power
+  const worth = state.coins + totalIPS()*120; // 2 minutes of income
+  return Math.floor(Math.sqrt(worth / 1500));
+}
+function doPrestige(){
+  const gain = prestigeGainEstimate();
+  if(gain < 1){
+    showFeedback("Not ready", "Earn more coins/income before prestiging.");
+    blip("fail");
+    return;
   }
 
-  load();
-  fastForwardMissions();
-  render();
+  state.prestige.points += gain;
 
-  setInterval(() => { tick(); render(); }, 400);
-  window.addEventListener("beforeunload", () => save());
-});
+  // reset run but keep prestige + settings
+  state.coins = 50;
+  state.cols = 5;
+  state.tiles = makeTiles(state.cols);
+  state.selected = null;
+  state.upgrades = {
+    incomeMult: 1.0,
+    costDiscount: 0.0,
+    spawnDiscount: 0.0,
+    offlineMult: 1.0,
+    collectBonus: 0.0,
+    prestigeMult: 1.0
+  };
+  state.meta.mergesTotal = 0;
+  state.meta.highestTier = 0;
+
+  showFeedback("Prestiged!", `+${gain} prestige. Permanent boost increased.`);
+  blip("prestige");
+  renderAll();
+}
+
+/* ---------- upgrades ---------- */
+const upgradeDefs = [
+  {
+    id:"incomeMult",
+    icon:"📣",
+    name:"City Marketing",
+    desc:"Boosts all income.",
+    levelText:()=>`x${state.upgrades.incomeMult.toFixed(2)}`,
+    cost:()=>{
+      const lvl = Math.round((Math.log(state.upgrades.incomeMult)/Math.log(1.20)) || 0);
+      return Math.floor(250 * (1 + lvl*0.75));
+    },
+    buy:()=>{ state.upgrades.incomeMult *= 1.20; }
+  },
+  {
+    id:"costDiscount",
+    icon:"🧱",
+    name:"Construction Deals",
+    desc:"Reduce upgrade/placement costs (cap 35%).",
+    levelText:()=>`${Math.round(state.upgrades.costDiscount*100)}%`,
+    cost:()=>{
+      const lvl = Math.round(state.upgrades.costDiscount/0.05);
+      return Math.floor(320 * (1 + lvl*0.95));
+    },
+    buy:()=>{ state.upgrades.costDiscount = Math.min(0.35, state.upgrades.costDiscount + 0.05); }
+  },
+  {
+    id:"spawnDiscount",
+    icon:"🏗️",
+    name:"Bulk Materials",
+    desc:"Reduce Place cost (cap 40%).",
+    levelText:()=>`${Math.round(state.upgrades.spawnDiscount*100)}%`,
+    cost:()=>{
+      const lvl = Math.round(state.upgrades.spawnDiscount/0.05);
+      return Math.floor(280 * (1 + lvl*0.85));
+    },
+    buy:()=>{ state.upgrades.spawnDiscount = Math.min(0.40, state.upgrades.spawnDiscount + 0.05); }
+  },
+  {
+    id:"offlineMult",
+    icon:"🌙",
+    name:"Night Shift",
+    desc:"Earn more while away.",
+    levelText:()=>`x${state.upgrades.offlineMult.toFixed(2)}`,
+    cost:()=>{
+      const lvl = Math.round((Math.log(state.upgrades.offlineMult)/Math.log(1.25)) || 0);
+      return Math.floor(380 * (1 + lvl*0.90));
+    },
+    buy:()=>{ state.upgrades.offlineMult *= 1.25; }
+  },
+  {
+    id:"collectBonus",
+    icon:"🎟️",
+    name:"Tourism Boom",
+    desc:"Bigger Collect Bonus payouts (cap +100%).",
+    levelText:()=>`+${Math.round(state.upgrades.collectBonus*100)}%`,
+    cost:()=>{
+      const lvl = Math.round(state.upgrades.collectBonus/0.12);
+      return Math.floor(240 * (1 + lvl*0.60));
+    },
+    buy:()=>{ state.upgrades.collectBonus = Math.min(1.0, state.upgrades.collectBonus + 0.12); }
+  },
+  {
+    id:"expand",
+    icon:"🗺️",
+    name:"City Expansion",
+    desc:"Expand grid from 5×5 to 6×6 (one-time).",
+    levelText:()=> (state.cols === 5 ? "5×5" : "6×6"),
+    cost:()=> (state.cols === 5 ? 1800 : Infinity),
+    buy:()=>{
+      if(state.cols !== 5) return;
+      const old = state.tiles.slice();
+      state.cols = 6;
+      state.tiles = makeTiles(6);
+      for(let i=0;i<old.length;i++) state.tiles[i] = old[i];
+    }
+  },
+  {
+    id:"prestigeMult",
+    icon:"⭐",
+    name:"Legacy Planning",
+    desc:"Boost prestige effectiveness.",
+    levelText:()=>`x${state.upgrades.prestigeMult.toFixed(2)}`,
+    cost:()=>{
+      const lvl = Math.round((Math.log(state.upgrades.prestigeMult)/Math.log(1.15)) || 0);
+      return Math.floor(900 * (1 + lvl*1.1));
+    },
+    buy:()=>{ state.upgrades.prestigeMult *= 1.15; }
+  },
+];
+
+function renderUpgrades(){
+  const list = $("#upgradeList");
+  list.innerHTML = "";
+
+  upgradeDefs.forEach(def=>{
+    const wrap = document.createElement("div");
+    wrap.className = "upgrade";
+
+    const icon = document.createElement("div");
+    icon.className = "uIcon";
+    icon.textContent = def.icon;
+
+    const main = document.createElement("div");
+    main.className = "uMain";
+
+    const name = document.createElement("div");
+    name.className = "uName";
+    name.textContent = def.name;
+
+    const desc = document.createElement("div");
+    desc.className = "uDesc";
+    desc.textContent = def.desc;
+
+    const meta = document.createElement("div");
+    meta.className = "uMeta";
+
+    const badge = document.createElement("div");
+    badge.className = "badge";
+    badge.textContent = `Level: ${def.levelText()}`;
+
+    const btn = document.createElement("button");
+    btn.className = "btn btnPrimary";
+    const cost = def.cost();
+
+    if(!Number.isFinite(cost)){
+      btn.textContent = "Maxed";
+      btn.disabled = true;
+    }else{
+      btn.textContent = `Buy (${fmt(cost)})`;
+      btn.addEventListener("click", ()=>{
+        ensureAudio();
+        if(state.coins < cost){
+          showToast("Not enough coins");
+          blip("fail");
+          return;
+        }
+        state.coins -= cost;
+        def.buy();
+        showToast("Purchased!");
+        blip("buy");
+        checkAchievements();
+        renderAll();
+      });
+    }
+
+    meta.appendChild(badge);
+    meta.appendChild(btn);
+
+    main.appendChild(name);
+    main.appendChild(desc);
+    main.appendChild(meta);
+
+    wrap.appendChild(icon);
+    wrap.appendChild(main);
+    list.appendChild(wrap);
+  });
+}
+
+/* ---------- achievements ---------- */
+const achievements = [
+  { id:"first_build", icon:"🏠", name:"First Build", desc:"Place your first building.", check:()=> state.tiles.some(t=> (t.tier||0) > 0) },
+  { id:"first_merge", icon:"🔀", name:"First Merge", desc:"Merge two buildings once.", check:()=> state.meta.mergesTotal >= 1 },
+  { id:"tier5", icon:"🌆", name:"Skyline Rising", desc:"Reach Tier 5.", check:()=> state.meta.highestTier >= 5 },
+  { id:"tier8", icon:"✨", name:"Neo Core", desc:"Reach Tier 8.", check:()=> state.meta.highestTier >= 8 },
+  { id:"ips1k", icon:"💸", name:"Money Machine", desc:"Reach 1,000 income/sec.", check:()=> totalIPS() >= 1000 },
+  { id:"prestige1", icon:"⭐", name:"Fresh Start", desc:"Prestige at least once.", check:()=> state.prestige.points >= 1 },
+];
+
+function unlockAch(a){
+  state.meta.achievements[a.id] = true;
+  showToast(`Achievement: ${a.name}`);
+  blip("daily");
+}
+function checkAchievements(){
+  for(const a of achievements){
+    if(state.meta.achievements[a.id]) continue;
+    if(a.check()) unlockAch(a);
+  }
+}
+function renderAchievements(){
+  const el = $("#achList");
+  el.innerHTML = "";
+  achievements.forEach(a=>{
+    const row = document.createElement("div");
+    row.className = "ach";
+    const icon = document.createElement("div");
+    icon.className = "uIcon";
+    icon.textContent = a.icon;
+
+    const main = document.createElement("div");
+    main.className = "uMain";
+
+    const name = document.createElement("div");
+    name.className = "uName";
+    name.textContent = a.name;
+
+    const desc = document.createElement("div");
+    desc.className = "uDesc";
+    desc.textContent = a.desc;
+
+    const meta = document.createElement("div");
+    meta.className = "uMeta";
+
+    const badge = document.createElement("div");
+    const unlocked = !!state.meta.achievements[a.id];
+    badge.className = "badge " + (unlocked ? "good" : "bad");
+    badge.textContent = unlocked ? "Unlocked" : "Locked";
+
+    meta.appendChild(badge);
+    main.appendChild(name);
+    main.appendChild(desc);
+    main.appendChild(meta);
+
+    row.appendChild(icon);
+    row.appendChild(main);
+    el.appendChild(row);
+  });
+}
+
+/* ---------- rendering ---------- */
+function renderStats(){
+  $("#coins").textContent = fmt(state.coins);
+  $("#ips").textContent = fmt(totalIPS());
+  $("#prestige").textContent = fmt(state.prestige.points);
+
+  // daily button state
+  const daily = $("#btnDaily");
+  daily.textContent = canClaimDaily() ? "Daily" : "Daily (locked)";
+  daily.disabled = !canClaimDaily();
+
+  // prestige button hint
+  const p = $("#btnPrestige");
+  const gain = prestigeGainEstimate();
+  p.textContent = gain >= 1 ? `Prestige (+${gain})` : "Prestige";
+}
+
+function tileAccent(tier){
+  const palettes = [
+    ["rgba(255,180,87,.22)","rgba(255,180,87,.06)"],
+    ["rgba(139,233,255,.22)","rgba(139,233,255,.06)"],
+    ["rgba(180,120,255,.22)","rgba(180,120,255,.06)"],
+    ["rgba(255,120,180,.22)","rgba(255,120,180,.06)"],
+  ];
+  return palettes[tier % palettes.length];
+}
+
+function renderGrid(){
+  const grid = $("#grid");
+  grid.style.setProperty("--cols", String(state.cols));
+  grid.innerHTML = "";
+
+  // compute mergeable targets
+  let mergeTier = null;
+  if(state.selected != null){
+    const st = state.tiles[state.selected]?.tier || 0;
+    if(st > 0) mergeTier = st;
+  }
+
+  state.tiles.forEach((t, idx)=>{
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tile " + ((t.tier||0) === 0 ? "empty" : "building");
+    btn.dataset.idx = String(idx);
+
+    if(state.selected === idx) btn.classList.add("selected");
+    if(mergeTier && idx !== state.selected && (t.tier||0) === mergeTier) btn.classList.add("mergeable");
+
+    const tier = t.tier || 0;
+    if(tier > 0){
+      const [c1, c2] = tileAccent(tier);
+      btn.style.background = `
+        radial-gradient(70% 70% at 30% 25%, rgba(255,255,255,.14), transparent 55%),
+        radial-gradient(90% 90% at 70% 80%, ${c1}, transparent 60%),
+        linear-gradient(180deg, ${c2}, rgba(255,255,255,.03))
+      `;
+      btn.style.borderColor = "rgba(255,180,87,.20)";
+    }
+
+    const info = tierInfo(tier);
+    const ips = incomePerSecTier(tier);
+
+    const content = document.createElement("div");
+    content.className = "content";
+    content.innerHTML = `
+      <div>
+        <div class="name">${tier > 0 ? `${info.icon} ${info.name}` : "Empty"}</div>
+        <div class="tier">${tier > 0 ? `Tier ${tier}` : `Place cost: ${fmt(placeCost())}`}</div>
+      </div>
+      <div>
+        <div class="meta">${tier > 0 ? `+${fmt(ips)}/sec` : "Tap to place"}</div>
+        <div class="meta" style="opacity:.85;">${tier > 0 ? "Tap: select / merge / move" : ""}</div>
+      </div>
+    `;
+    btn.appendChild(content);
+
+    btn.addEventListener("click", ()=> onTileClick(idx));
+    grid.appendChild(btn);
+  });
+}
+
+function renderAll(){
+  renderStats();
+  renderGrid();
+  renderUpgrades();
+  renderAchievements();
+}
+
+/* ---------- tick loop ---------- */
+function tick(){
+  // 10 ticks/sec for smooth display
+  state.coins += totalIPS() / 10;
+  renderStats();
+}
+
+/* ---------- bind UI ---------- */
+function bindUI(){
+  $("#btnSpawn").addEventListener("click", ()=>{ ensureAudio(); placeBuilding(); });
+  $("#btnCollect").addEventListener("click", ()=>{ ensureAudio(); collectBonus(); });
+  $("#btnAutoMerge").addEventListener("click", ()=>{ ensureAudio(); autoMergeHint(); });
+  $("#btnDaily").addEventListener("click", ()=>{ ensureAudio(); claimDaily(); });
+  $("#btnPrestige").addEventListener("click", ()=>{ ensureAudio(); doPrestige(); });
+
+  $("#btnSave").addEventListener("click", ()=> saveGame(true));
+  $("#btnReset").addEventListener("click", resetGame);
+
+  $("#btnHelp").addEventListener("click", ()=>{ blip("tap"); openModal("#helpOverlay"); });
+  $("#helpClose").addEventListener("click", ()=>{ blip("tap"); closeModal("#helpOverlay"); });
+  $("#helpOk").addEventListener("click", ()=>{ blip("tap"); closeModal("#helpOverlay"); });
+
+  $("#btnSettings").addEventListener("click", ()=>{ blip("tap"); openModal("#settingsOverlay"); });
+  $("#settingsClose").addEventListener("click", ()=>{ blip("tap"); closeModal("#settingsOverlay"); });
+  $("#settingsOk").addEventListener("click", ()=>{ blip("tap"); closeModal("#settingsOverlay"); });
+
+  $("#toggleSound").addEventListener("change", (e)=>{
+    state.settings.sound = e.target.checked;
+    saveSettings();
+    showToast(state.settings.sound ? "Sound on" : "Sound off");
+    if(state.settings.sound) ensureAudio();
+  });
+  $("#toggleMotion").addEventListener("change", (e)=>{
+    state.settings.reducedMotion = e.target.checked;
+    applySettings();
+    saveSettings();
+    showToast(state.settings.reducedMotion ? "Reduced motion on" : "Reduced motion off");
+  });
+  $("#toggleOffline").addEventListener("change", (e)=>{
+    state.settings.offlineEarnings = e.target.checked;
+    saveSettings();
+    showToast(state.settings.offlineEarnings ? "Offline earnings on" : "Offline earnings off");
+  });
+
+  $("#feedbackOk").addEventListener("click", ()=>{ blip("tap"); hideFeedback(); });
+
+  ["#helpOverlay", "#settingsOverlay"].forEach(id=>{
+    const ov = $(id);
+    ov.addEventListener("click", (e)=>{
+      if(e.target === ov){ blip("tap"); closeModal(id); }
+    });
+  });
+  $("#feedback").addEventListener("click", (e)=>{ if(e.target.id === "feedback") hideFeedback(); });
+
+  // autosave on close
+  window.addEventListener("beforeunload", ()=> saveGame(false));
+
+  // iOS audio unlock
+  document.addEventListener("pointerdown", function once(){
+    if(state.settings.sound) ensureAudio();
+    document.removeEventListener("pointerdown", once);
+  }, { once:true });
+}
+
+/* ---------- start ---------- */
+function start(){
+  loadSettings();
+  loadGame();
+
+  // ensure tiles exist
+  if(!Array.isArray(state.tiles) || state.tiles.length !== gridSize()){
+    state.tiles = makeTiles(state.cols);
+  }
+
+  applySettings();
+  setSelected(null);
+
+  applyOfflineEarnings();
+  checkAchievements();
+  renderAll();
+  bindUI();
+
+  setInterval(tick, 100);
+  setInterval(()=> saveGame(false), 5000);
+}
+start();
