@@ -1,12 +1,12 @@
-// Flip City — Builder Edition v7.1 (CLEAN)
-// Activity Meter: "Collect Revenue" is earned (Activity fills over time; collect only when charged).
-// Adds: Support email cityflipsupport@gmail.com in Help + footer.
+// Flip City — Builder Edition v7.2 (Sunset + Skyline Art)
+// Earn-to-Collect: Activity fills over time (mostly Shops). Collect only when charged.
+// Includes: 5 upgrades, intro/help, "what to do next", disasters/events, support email.
 
 document.addEventListener("DOMContentLoaded", () => {
   const root = document.getElementById("game");
   if (!root) return console.error("❌ Missing <div id='game'></div> in index.html");
 
-  const SUPPORT_EMAIL = "cityflipsupport@gmail.com";
+  const SUPPORT_EMAIL = "supportcityflipgame.com";
 
   // -------------------- Styles --------------------
   const style = document.createElement("style");
@@ -15,10 +15,13 @@ document.addEventListener("DOMContentLoaded", () => {
     body{
       margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       color:#eaf0ff; min-height:100vh;
+
+      /* Sunset background */
       background:
-        radial-gradient(900px 450px at 35% 10%, rgba(94,203,255,.16), transparent 55%),
-        radial-gradient(900px 450px at 70% 18%, rgba(186,94,255,.12), transparent 55%),
-        linear-gradient(180deg, #060716, #0b1220 55%, #05060f);
+        radial-gradient(900px 520px at 30% 12%, rgba(255,166,94,.28), transparent 55%),
+        radial-gradient(900px 520px at 72% 18%, rgba(255,94,186,.22), transparent 60%),
+        radial-gradient(1100px 650px at 50% 0%, rgba(94,203,255,.14), transparent 62%),
+        linear-gradient(180deg, #0a0630 0%, #2b0f3a 22%, #7a2b3f 45%, #d06a4a 68%, #0b1220 100%);
     }
     a{ color: rgba(94,203,255,.95); text-decoration: none; }
     a:hover{ text-decoration: underline; }
@@ -112,8 +115,8 @@ document.addEventListener("DOMContentLoaded", () => {
       box-shadow: 0 0 0 3px rgba(94,203,255,.10);
     }
     .tool.suggest{
-      border-color: rgba(255,206,94,.40);
-      box-shadow: 0 0 0 3px rgba(255,206,94,.10);
+      border-color: rgba(255,206,94,.45);
+      box-shadow: 0 0 0 3px rgba(255,206,94,.12);
     }
     .tool .icon{ font-size: 18px; }
     .tool .name{ font-weight: 1000; }
@@ -129,6 +132,65 @@ document.addEventListener("DOMContentLoaded", () => {
     .skyline{ font-size: 30px; line-height: 1.1; letter-spacing: 2px; white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
     .hint{ font-size: 12px; opacity:.82; margin-top: 6px; }
     .hint b{ opacity: 1; }
+
+    /* Sunset skyline art panel */
+    .skyArt{
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.14);
+      overflow: hidden;
+      background:
+        radial-gradient(700px 240px at 50% 18%, rgba(255,205,94,.30), transparent 60%),
+        radial-gradient(900px 320px at 70% 22%, rgba(255,94,186,.22), transparent 65%),
+        linear-gradient(180deg, rgba(94,203,255,.18), rgba(255,255,255,.05) 40%, rgba(0,0,0,.18) 100%);
+      position: relative;
+      padding: 12px;
+    }
+    .skyArt::after{
+      content:"";
+      position:absolute; left:-10%; right:-10%; bottom:-6px; height: 52%;
+      background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.35) 40%, rgba(0,0,0,.65));
+      pointer-events:none;
+    }
+    .skyHorizon{
+      position:absolute; left:0; right:0; bottom:0;
+      height: 40%;
+      background:
+        linear-gradient(180deg, rgba(10,12,30,0), rgba(10,12,30,.50) 55%, rgba(0,0,0,.70));
+      pointer-events:none;
+    }
+    .skylineRow{
+      position: relative;
+      z-index: 2;
+      display:flex;
+      align-items:flex-end;
+      gap: 6px;
+      height: 58px;
+      margin-top: 8px;
+    }
+    .bldg{
+      width: 14px;
+      border-radius: 6px 6px 3px 3px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.35);
+      box-shadow: 0 10px 24px rgba(0,0,0,.35);
+      position: relative;
+      overflow:hidden;
+    }
+    .bldg::before{
+      content:"";
+      position:absolute; inset:0;
+      background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,0));
+      opacity:.55;
+    }
+    .bldg::after{
+      content:"";
+      position:absolute; left:2px; right:2px; top:6px; bottom:6px;
+      background:
+        repeating-linear-gradient(90deg, rgba(255,206,94,.35) 0 2px, transparent 2px 6px);
+      opacity:.22;
+    }
+    .bldg.tall{ width: 16px; }
+    .bldg.wide{ width: 22px; }
 
     .meterWrap{
       margin-top: 10px;
@@ -203,7 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     .tile .e{ font-size: 22px; }
-    .tile .s{ font-size: 10px; opacity:.80; margin-top: 2px; text-align:center; padding: 0 4px; }
+    .tile .s{ font-size: 10px; opacity:.80; margin-top: 2px; text-align:center; padding: 0 4px; min-height: 14px; }
     .tile .u{
       position:absolute; top:6px; right:6px;
       display:flex; gap: 4px;
@@ -312,7 +374,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // -------------------- Helpers --------------------
   const now = () => Date.now();
-  const SAVE_KEY = "flipcity_builder_v71";
+  const SAVE_KEY = "flipcity_builder_v72";
   const COLLECT_MIN = 10;        // percent
   const COLLECT_COOLDOWN = 800;  // ms
 
@@ -361,7 +423,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const BUILD_MENU = ["house","shop","fact","park","road","power","water","upgrade","repair","bulldoze"];
 
   const EVENTS = [
-    { id:"festival", name:"City Festival 🎉", desc:"+50% Activity/Revenue for 40s", dur:40_000, actMult:1.5, passMult:1.0 },
+    { id:"festival", name:"City Festival 🎉", desc:"+50% Activity for 40s", dur:40_000, actMult:1.5, passMult:1.0 },
     { id:"boom",     name:"Construction Boom 🏗️", desc:"+50% Passive for 40s", dur:40_000, actMult:1.0, passMult:1.5 },
     { id:"fire",     name:"Fire 🔥", desc:"A random building catches fire (repair it)", dur:0, fire:true }
   ];
@@ -393,13 +455,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // -------------------- Missions --------------------
   const MISSIONS = [
-    { id:"m1", title:"Lay foundations", desc:"Build 4 Houses.", check: s => countType("house") >= 4 },
-    { id:"m2", title:"Green spaces", desc:"Build 2 Parks near Houses.", check: s => parksNearHouses() >= 2 },
-    { id:"m3", title:"Turn on utilities", desc:"Build 1 Power Plant ⚡ and 1 Water Tower 💧.", check: s => countType("power")>=1 && countType("water")>=1 },
-    { id:"m4", title:"Connect commerce", desc:"Build 2 Roads and 2 Shops.", check: s => countType("road")>=2 && countType("shop")>=2 },
-    { id:"m5", title:"Industrial zone", desc:"Build 1 Factory 🏭 and keep it away from Parks.", check: s => countType("fact")>=1 && factoryParkConflicts() === 0 },
-    { id:"m6", title:"Upgrade a building", desc:"Upgrade any building to Level 3.", check: s => maxLevelAny() >= 3 },
-    { id:"m7", title:"City in motion", desc:"Reach $500 total earned.", check: s => s.totalEarned >= 500 },
+    { id:"m1", title:"Lay foundations", desc:"Build 4 Houses.", check: () => countType("house") >= 4 },
+    { id:"m2", title:"Green spaces", desc:"Build 2 Parks near Houses.", check: () => parksNearHouses() >= 2 },
+    { id:"m3", title:"Turn on utilities", desc:"Build 1 Power Plant ⚡ and 1 Water Tower 💧.", check: () => countType("power")>=1 && countType("water")>=1 },
+    { id:"m4", title:"Connect commerce", desc:"Build 2 Roads and 2 Shops.", check: () => countType("road")>=2 && countType("shop")>=2 },
+    { id:"m5", title:"Industrial zone", desc:"Build 1 Factory 🏭 and keep it away from Parks.", check: () => countType("fact")>=1 && factoryParkConflicts() === 0 },
+    { id:"m6", title:"Upgrade a building", desc:"Upgrade any building to Level 3.", check: () => maxLevelAny() >= 3 },
+    { id:"m7", title:"City in motion", desc:"Reach $500 total earned.", check: () => state.totalEarned >= 500 },
   ];
 
   // -------------------- Upgrade effects --------------------
@@ -650,6 +712,34 @@ document.addEventListener("DOMContentLoaded", () => {
     return skyline.slice(0, 12).join(" ");
   }
 
+  function skylineBarsHtml(){
+    const c = {
+      house: countType("house"),
+      shop: countType("shop"),
+      fact: countType("fact"),
+      power: countType("power"),
+      water: countType("water"),
+    };
+
+    const bars = [];
+    const push = (n, h, cls="") => {
+      for (let i=0;i<n;i++){
+        const height = Math.max(10, Math.min(58, h + (i%3)*6));
+        bars.push(`<div class="bldg ${cls}" style="height:${height}px"></div>`);
+      }
+    };
+
+    push(Math.min(10, c.house), 18, "");
+    push(Math.min(6,  c.shop),  28, "wide");
+    push(Math.min(4,  c.power), 34, "tall");
+    push(Math.min(4,  c.water), 32, "tall");
+    push(Math.min(4,  c.fact),  48, "tall");
+
+    if (!bars.length) push(6, 14, "");
+
+    return bars.slice(0, 18).join("");
+  }
+
   // -------------------- Undo --------------------
   function pushUndo(){
     const snap = {
@@ -664,6 +754,7 @@ document.addEventListener("DOMContentLoaded", () => {
     state.undo.push(snap);
     if (state.undo.length > 30) state.undo.shift();
   }
+
   function doUndo(){
     const snap = state.undo.pop();
     if (!snap) return toast("Nothing to undo.");
@@ -682,7 +773,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // -------------------- Missions --------------------
   function nextMissionIfComplete(){
     let progressed = false;
-    while (state.missionIndex < MISSIONS.length && MISSIONS[state.missionIndex].check(state)){
+    while (state.missionIndex < MISSIONS.length && MISSIONS[state.missionIndex].check()){
       state.missionIndex++;
       progressed = true;
     }
@@ -929,7 +1020,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // -------------------- Save / Load --------------------
   function exportSave(){
     const data = {
-      v: 71,
+      v: 72,
       cash: state.cash,
       totalEarned: state.totalEarned,
       board: state.board,
@@ -946,7 +1037,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function importSave(code){
     const json = decodeURIComponent(escape(atob(code.trim())));
     const data = safeParse(json, null);
-    if (!data || (data.v !== 71 && data.v !== 7)) throw new Error("Bad save");
+    if (!data || (data.v !== 72 && data.v !== 71 && data.v !== 7)) throw new Error("Bad save");
 
     state.cash = Number(data.cash ?? 0) || 0;
     state.totalEarned = Number(data.totalEarned ?? 0) || 0;
@@ -976,7 +1067,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     state.seenIntro = !!data.seenIntro;
     state.activity = clamp(Number(data.activity ?? 0) || 0, 0, 100);
-
     state.lastTickAt = now();
   }
 
@@ -1078,19 +1168,19 @@ document.addEventListener("DOMContentLoaded", () => {
               <div class="step">
                 <div class="title">Core loop</div>
                 <div class="text">
-                  Build <b>Houses 🏠</b> (passive) + <b>Parks 🌳</b> (bonus) →
+                  Build <b>Houses 🏠</b> + <b>Parks 🌳</b> →
                   add <b>Utilities ⚡💧</b> →
                   build <b>Shops 🏪</b> + <b>Roads 🛣️</b> to charge <b>Activity</b> →
-                  <b>Collect Revenue</b> when charged →
-                  place <b>Factories 🏭</b> for big passive →
+                  <b>Collect Revenue</b> →
+                  place <b>Factories 🏭</b> →
                   <b>Upgrade ⬆️</b> to scale.
                 </div>
               </div>
               <div class="step">
                 <div class="title">Activity meter</div>
                 <div class="text">
-                  Activity fills automatically based on your city’s commerce (mostly Shops).<br>
-                  You can only collect revenue when Activity has charge (so it’s not a spam button).
+                  Activity fills automatically (mostly from Shops).<br>
+                  You can only collect when Activity is charged (no spam-clicking).
                 </div>
               </div>
 
@@ -1106,14 +1196,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="title">Disasters/events</div>
                 <div class="text">
                   Fires 🔥 shut buildings down until repaired. Use the <b>Repair</b> tool.
-                  Events can boost Activity/Revenue or Passive.
+                  Events can boost Activity or Passive.
                 </div>
               </div>
             </div>
           </div>
 
           <div class="modalFooter">
-            <span class="sub">Tip: only the hovered tile shows a placement preview icon.</span>
+            <span class="sub">Tip: hover a tile to preview your selected build.</span>
             <button class="btn primary" id="btnStart">Start Building</button>
           </div>
         </div>
@@ -1140,7 +1230,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="top">
           <div>
             <h1>Flip City</h1>
-            <div class="sub">Builder flow: Missions → Utilities → Commerce → Collect Revenue → Industry → Upgrades → Events.</div>
+            <div class="sub">Builder flow: Missions → Utilities → Commerce → Collect → Industry → Upgrades → Events.</div>
           </div>
           <div class="row">
             <button class="btn small" id="btnHelp">Help</button>
@@ -1154,7 +1244,11 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="row" style="margin-top:12px;">
           <div class="card sky" style="flex:1 1 720px;">
             <h2>Skyline Preview</h2>
-            <div class="skyline">${skylineString()}</div>
+            <div class="skyArt">
+              <div class="skyline">${skylineString()}</div>
+              <div class="skylineRow">${skylineBarsHtml()}</div>
+              <div class="skyHorizon"></div>
+            </div>
 
             <div class="hint">${g.text}</div>
 
@@ -1205,10 +1299,6 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="buildBar">
               ${BUILD_MENU.map(k => toolCard(k, suggestKey)).join("")}
             </div>
-            <div class="panelSmall" style="margin-top:10px;">
-              Selected: <b>${state.tool}</b>
-              ${TYPES[state.tool] ? ` · Cost: <b>$${fmt(buildingCost(state.tool))}</b>` : ""}
-            </div>
 
             <div class="hr"></div>
 
@@ -1221,13 +1311,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
             <div class="footer">
               <span>Support: <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></span>
-              <span>Flip City v7.1</span>
+              <span>Flip City v7.2</span>
             </div>
           </div>
 
           <div class="card">
             <h2>City Grid</h2>
-            <div class="panelSmall">Hover to preview (only hovered tile). Click to act. 🔥 buildings need Repair.</div>
+            <div class="panelSmall">Hover to preview. Click to act. 🔥 buildings need Repair.</div>
             <div class="board">
               <div class="grid" id="grid"></div>
             </div>
@@ -1389,7 +1479,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // -------------------- Boot --------------------
   function fastForwardMissions(){
-    while (state.missionIndex < MISSIONS.length && MISSIONS[state.missionIndex].check(state)) state.missionIndex++;
+    while (state.missionIndex < MISSIONS.length && MISSIONS[state.missionIndex].check()) state.missionIndex++;
   }
 
   load();
