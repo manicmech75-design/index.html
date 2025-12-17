@@ -37,11 +37,11 @@ const state = {
   perTapBase: 1,
   passivePerSec: 0,
 
-  tapBoostLevel: 0,     // increases per tap
-  passiveLevel: 0,      // increases per second
-  cityDevLevel: 0,      // boosts tile bonus multiplier
+  tapBoostLevel: 0,
+  passiveLevel: 0,
+  cityDevLevel: 0,
 
-  tiles: [],            // each tile: { level }
+  tiles: [], // each tile: { level }
   lastSeen: Date.now(),
 };
 
@@ -64,15 +64,14 @@ function showToast(text = "Saved") {
 }
 
 function tileTapValue(tileLevel) {
-  // tile gives a bonus based on its level, multiplied by city development
   const devMult = 1 + state.cityDevLevel * 0.10;
-  const tileBonus = Math.max(0, tileLevel) * 0.25; // +$0.25 per tile level
+  const tileBonus = Math.max(0, tileLevel) * 0.25;
   return (state.perTapBase + tileBonus) * devMult;
 }
 
 function totalPerTapPreview() {
-  // preview uses average tile level
-  const avgLvl = state.tiles.reduce((a, t) => a + t.level, 0) / state.tiles.length;
+  const len = state.tiles.length || 1;
+  const avgLvl = state.tiles.reduce((a, t) => a + t.level, 0) / len;
   return tileTapValue(avgLvl);
 }
 
@@ -109,11 +108,9 @@ function renderTiles() {
       const earned = tileTapValue(t.level);
       state.cash += earned;
 
-      // small progression: tile levels up slowly with use
       if (Math.random() < 0.10) t.level += 1;
 
       render();
-      // re-render this tile only (simple: rerender all)
       renderTiles();
     });
 
@@ -122,15 +119,12 @@ function renderTiles() {
 }
 
 function getTapBoostCost() {
-  // 25, 40, 60, 85...
   return Math.floor(25 * Math.pow(1.35, state.tapBoostLevel));
 }
 function getPassiveCost() {
-  // 50, 80, 120...
   return Math.floor(50 * Math.pow(1.45, state.passiveLevel));
 }
 function getCityDevCost() {
-  // 75, 120, 180...
   return Math.floor(75 * Math.pow(1.5, state.cityDevLevel));
 }
 
@@ -142,10 +136,7 @@ function spend(cost) {
 }
 
 function applyUpgrades() {
-  // tap boost: +$1 each level
   state.perTapBase = 1 + state.tapBoostLevel * 1;
-
-  // passive: +$1/s each level
   state.passivePerSec = state.passiveLevel * 1;
 }
 
@@ -161,12 +152,9 @@ function load() {
 
   try {
     const data = JSON.parse(raw);
-
-    // shallow assign known fields
     for (const k of Object.keys(state)) {
       if (k in data) state[k] = data[k];
     }
-
     createTilesIfMissing();
     applyUpgrades();
     return true;
@@ -186,10 +174,9 @@ function handleOfflineEarnings() {
   const awayMs = Math.max(0, now - (state.lastSeen || now));
   const awaySec = Math.floor(awayMs / 1000);
 
-  if (awaySec < 10) return; // ignore tiny gaps
+  if (awaySec < 10) return;
   if (state.passivePerSec <= 0) return;
 
-  // cap offline time at 6 hours to avoid crazy jumps
   const cappedSec = Math.min(awaySec, 6 * 60 * 60);
   const earned = cappedSec * state.passivePerSec;
 
@@ -198,14 +185,12 @@ function handleOfflineEarnings() {
 
   els.offlineModal.style.display = "flex";
 
-  const close = () => {
+  els.offlineOk.onclick = () => {
     els.offlineModal.style.display = "none";
     state.cash += earned;
     render();
     save();
   };
-
-  els.offlineOk.onclick = close;
 }
 
 function exportSave() {
