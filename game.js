@@ -1,27 +1,20 @@
-// game.js — Flip City (visible city + stages + districts + events)
-// Works on GitHub Pages. No external assets required.
+// Flip City — v3 (5 upgrades + tile visuals + skyline + stages + events)
+// No external assets. GitHub Pages safe.
 
 document.addEventListener("DOMContentLoaded", () => {
   const root = document.getElementById("game");
-  if (!root) {
-    console.error("❌ #game not found. Add <div id='game'></div> to index.html");
-    return;
-  }
+  if (!root) return console.error("❌ Missing <div id='game'></div>");
 
   // ---------- Styles ----------
   const style = document.createElement("style");
   style.textContent = `
     :root { color-scheme: dark; }
-    body {
-      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background: #0b1220; color: #e8eefc;
-      min-height: 100vh;
-    }
-    .wrap { max-width: 1060px; margin: 0 auto; padding: 20px; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#eaf0ff; min-height:100vh; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 18px; }
     .top { display:flex; gap:12px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; }
-    h1 { font-size: 20px; margin: 0 0 4px 0; }
-    .sub { opacity: .85; font-size: 13px; }
-    .row { display:flex; gap:12px; flex-wrap:wrap; align-items:stretch; }
+    h1 { margin:0; font-size: 20px; }
+    .sub { opacity:.82; font-size: 13px; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:stretch; }
     .card {
       background: rgba(255,255,255,.06);
       border: 1px solid rgba(255,255,255,.12);
@@ -29,51 +22,29 @@ document.addEventListener("DOMContentLoaded", () => {
       padding: 14px;
       box-shadow: 0 10px 30px rgba(0,0,0,.25);
     }
-    .card h2 { margin: 0 0 8px 0; font-size: 14px; opacity: .95; letter-spacing: .2px; }
-    .statgrid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
-    .stat { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.10); border-radius: 14px; padding: 10px; }
-    .stat .k { font-size: 12px; opacity: .8; }
-    .stat .v { font-size: 16px; margin-top: 4px; }
+    .card h2 { margin:0 0 10px 0; font-size: 14px; opacity:.92; letter-spacing:.2px; }
     .btn {
-      appearance: none; border: 0; cursor: pointer;
+      appearance:none; border:0; cursor:pointer;
       background: rgba(255,255,255,.10);
-      color: #e8eefc;
-      border: 1px solid rgba(255,255,255,.16);
+      color:#eaf0ff;
+      border:1px solid rgba(255,255,255,.16);
       border-radius: 14px;
       padding: 10px 12px;
-      font-weight: 650;
-      transition: transform .05s ease, background .15s ease;
-      user-select: none;
+      font-weight: 750;
+      transition: transform .05s ease, background .15s ease, opacity .15s ease;
+      user-select:none;
       white-space: nowrap;
     }
     .btn:hover { background: rgba(255,255,255,.14); }
     .btn:active { transform: translateY(1px) scale(.99); }
     .btn.primary { background: rgba(94, 203, 255, .18); border-color: rgba(94, 203, 255, .35); }
     .btn.danger { background: rgba(255, 94, 94, .14); border-color: rgba(255, 94, 94, .35); }
-    .btn.small { padding: 8px 10px; border-radius: 12px; font-weight: 650; }
-    .muted { opacity: .78; }
-    .hr { height: 1px; background: rgba(255,255,255,.10); margin: 12px 0; border-radius: 99px; }
-    .spacer { height: 8px; }
+    .btn.small { padding: 8px 10px; border-radius: 12px; font-weight: 750; }
 
-    .cityBox {
-      border-radius: 18px;
-      padding: 14px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
-      position: relative;
-      overflow: hidden;
-    }
-    .skyline {
-      font-size: 34px;
-      line-height: 1.1;
-      letter-spacing: 2px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      filter: drop-shadow(0 10px 20px rgba(0,0,0,.35));
-    }
-    .stageLine { display:flex; gap:10px; align-items:center; flex-wrap: wrap; margin-top: 8px; }
+    .hr { height:1px; background: rgba(255,255,255,.10); border-radius:99px; margin:12px 0; }
+
     .pill {
+      display:inline-flex; align-items:center; gap:8px;
       padding: 7px 10px;
       border-radius: 999px;
       background: rgba(255,255,255,.08);
@@ -82,24 +53,72 @@ document.addEventListener("DOMContentLoaded", () => {
       opacity: .95;
     }
 
-    .shop { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
-    @media (max-width: 900px) { .shop { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    .grid {
+      display:grid;
+      grid-template-columns: 1.2fr 2fr;
+      gap: 12px;
+    }
+    @media (max-width: 920px) { .grid { grid-template-columns: 1fr; } }
+
+    .statsGrid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+    .stat { background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10); border-radius: 14px; padding: 10px; }
+    .k { font-size: 12px; opacity:.78; }
+    .v { margin-top: 4px; font-size: 16px; font-weight: 800; }
+
+    .shop { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
     @media (max-width: 560px) { .shop { grid-template-columns: 1fr; } }
 
-    .shopItem {
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 16px;
-      padding: 12px;
-      display:flex;
-      flex-direction: column;
-      gap: 8px;
+    .shopItem { background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius: 16px; padding: 12px; display:flex; flex-direction:column; gap: 8px; }
+    .shopItem .t { font-weight: 850; }
+    .shopItem .d { font-size: 12px; opacity:.8; }
+    .shopItem .b { display:flex; justify-content:space-between; align-items:center; gap: 10px; }
+    .shopItem .meta { font-size: 12px; opacity:.85; }
+
+    .skyBox {
+      border-radius: 18px;
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      overflow:hidden;
     }
-    .shopItem .t { font-weight: 750; }
-    .shopItem .d { font-size: 12px; opacity: .8; }
-    .shopItem .b { display:flex; align-items:center; justify-content:space-between; gap: 10px; }
-    .shopItem .cost { font-size: 12px; opacity: .85; }
-    .shopItem .lvl { font-size: 12px; opacity: .85; }
+    .skyline {
+      font-size: 34px;
+      line-height: 1.15;
+      letter-spacing: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      filter: drop-shadow(0 10px 20px rgba(0,0,0,.35));
+    }
+
+    .tilesWrap { display:flex; flex-direction:column; gap: 10px; }
+    .tiles {
+      display:grid;
+      grid-template-columns: repeat(6, minmax(0,1fr));
+      gap: 10px;
+    }
+    @media (max-width: 900px) { .tiles { grid-template-columns: repeat(4, minmax(0,1fr)); } }
+    @media (max-width: 520px) { .tiles { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+
+    .tile {
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      padding: 12px 10px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap: 6px;
+      cursor:pointer;
+      user-select:none;
+      min-height: 86px;
+      transition: transform .06s ease, background .15s ease;
+    }
+    .tile:hover { background: rgba(255,255,255,.09); }
+    .tile:active { transform: translateY(1px) scale(.99); }
+    .tile .icon { font-size: 30px; }
+    .tile .lvl { font-size: 12px; opacity:.82; }
 
     .toast {
       position: fixed;
@@ -120,26 +139,11 @@ document.addEventListener("DOMContentLoaded", () => {
       white-space: nowrap;
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
-
-    .eventBox {
-      border-radius: 16px;
-      padding: 12px;
-      border: 1px dashed rgba(255,255,255,.22);
-      background: rgba(255,255,255,.05);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .eventBox .left { display:flex; flex-direction: column; gap: 4px; }
-    .eventBox .name { font-weight: 800; }
-    .eventBox .desc { font-size: 12px; opacity: .82; }
   `;
   document.head.appendChild(style);
 
   // ---------- Helpers ----------
-  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const SAVE_KEY = "flipcity_v3_save";
   const now = () => Date.now();
 
   function fmt(n) {
@@ -147,187 +151,145 @@ document.addEventListener("DOMContentLoaded", () => {
     const abs = Math.abs(n);
     if (abs < 1000) return n.toFixed(0);
     const units = ["K","M","B","T","Qa","Qi","Sx","Sp","Oc","No","Dc"];
-    let u = -1;
-    let v = abs;
+    let u = -1, v = abs;
     while (v >= 1000 && u < units.length - 1) { v /= 1000; u++; }
     const sign = n < 0 ? "-" : "";
     return `${sign}${v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2)}${units[u]}`;
   }
 
   function toast(msg) {
-    const t = document.getElementById("toast");
-    if (!t) return;
-    t.textContent = msg;
-    t.classList.add("show");
-    clearTimeout(toast._timer);
-    toast._timer = setTimeout(() => t.classList.remove("show"), 1400);
+    const el = document.getElementById("toast");
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => el.classList.remove("show"), 1400);
   }
 
-  function safeParse(json, fallback) {
-    try { return JSON.parse(json); } catch { return fallback; }
+  function safeParse(s, fallback) {
+    try { return JSON.parse(s); } catch { return fallback; }
   }
 
-  // ---------- Game Data ----------
-  const SAVE_KEY = "flipcity_save_v2";
+  // ---------- Visual building levels ----------
+  const BUILDING = ["⬜", "🏠", "🏢", "🏬", "🏙️", "🌆"]; // 0..5
+  const MAX_LVL = BUILDING.length - 1;
 
-  const CITY_STAGES = [
-    { name: "Campsite",    req: 0,    skyline: ["⛺","🔥","🌲","🌲","🏕️"], bg: "night" },
-    { name: "Hamlet",      req: 5,    skyline: ["🏡","🏡","🌳","🚜","🏠"], bg: "dawn" },
-    { name: "Village",     req: 15,   skyline: ["🏠","🏠","🏡","🌳","🛤️","🏠"], bg: "morning" },
-    { name: "Town",        req: 30,   skyline: ["🏫","🏤","🏠","🏡","🚏","🏠"], bg: "day" },
-    { name: "City",        req: 60,   skyline: ["🏢","🏬","🏥","🏦","🚦","🏢"], bg: "sunset" },
-    { name: "Metropolis",  req: 120,  skyline: ["🏙️","🏢","🏢","🏬","🏦","🚇","🏙️"], bg: "neon" },
-    { name: "Mega City",   req: 240,  skyline: ["🌆","🏙️","🏢","🏢","🏬","🏦","🌉","🌆"], bg: "midnight" },
+  // ---------- City stages (by City Dev) ----------
+  const STAGES = [
+    { name: "Campsite", req: 0,   bg: "night" },
+    { name: "Hamlet",   req: 6,   bg: "dawn" },
+    { name: "Village",  req: 16,  bg: "morning" },
+    { name: "Town",     req: 32,  bg: "day" },
+    { name: "City",     req: 60,  bg: "sunset" },
+    { name: "Metro",    req: 110, bg: "neon" },
   ];
-
-  const BACKGROUNDS = {
+  const BGS = {
     night:   "radial-gradient(1200px 500px at 20% 10%, rgba(94,203,255,.20), transparent 55%), linear-gradient(180deg, #081022, #070b14 60%, #05070d)",
     dawn:    "radial-gradient(900px 450px at 30% 20%, rgba(255,206,94,.24), transparent 55%), linear-gradient(180deg, #0a1230, #0b1220 60%, #070b12)",
     morning: "radial-gradient(900px 450px at 30% 10%, rgba(94,203,255,.22), transparent 55%), linear-gradient(180deg, #0b1733, #0b1220 60%, #070b12)",
     day:     "radial-gradient(900px 450px at 40% 10%, rgba(124,255,170,.16), transparent 55%), linear-gradient(180deg, #0b1730, #0b1220 60%, #070b12)",
     sunset:  "radial-gradient(900px 450px at 40% 12%, rgba(255,94,94,.20), transparent 55%), linear-gradient(180deg, #1c1030, #0b1220 60%, #070b12)",
     neon:    "radial-gradient(900px 450px at 40% 12%, rgba(186,94,255,.22), transparent 55%), radial-gradient(900px 450px at 70% 18%, rgba(94,203,255,.18), transparent 55%), linear-gradient(180deg, #120b2a, #0b1220 60%, #070b12)",
-    midnight:"radial-gradient(900px 450px at 35% 12%, rgba(94,203,255,.15), transparent 55%), radial-gradient(900px 450px at 75% 18%, rgba(255,94,186,.14), transparent 55%), linear-gradient(180deg, #050615, #0b1220 60%, #04050b)",
   };
 
-  // Districts: unlocked by City Dev level; give passive/tap boosts (multiplicative)
-  const DISTRICTS = [
-    { id: "res", name: "Residential", icon: "🏘️", req: 10,  desc: "+5% tap & +5% passive", tapMult: 1.05, passMult: 1.05, level: 0 },
-    { id: "ind", name: "Industrial",  icon: "🏭", req: 35,  desc: "+12% passive",          tapMult: 1.00, passMult: 1.12, level: 0 },
-    { id: "com", name: "Commercial",  icon: "🏬", req: 70,  desc: "+12% tap",             tapMult: 1.12, passMult: 1.00, level: 0 },
-    { id: "civ", name: "Civic",       icon: "🏛️", req: 140, desc: "+8% all + event luck", tapMult: 1.08, passMult: 1.08, level: 0, luck: 1.20 },
-  ];
+  function currentStage(cityDev) {
+    let s = STAGES[0];
+    for (const st of STAGES) if (cityDev >= st.req) s = st;
+    return s;
+  }
 
-  // Events: temporary boosts you can activate when they appear
-  const EVENTS = [
-    { id: "festival", name: "City Festival 🎉", desc: "2× tap for 30s", durationMs: 30_000, tapMult: 2.0, passMult: 1.0 },
-    { id: "boom",     name: "Construction Boom 🏗️", desc: "2× passive for 30s", durationMs: 30_000, tapMult: 1.0, passMult: 2.0 },
-    { id: "grant",    name: "Innovation Grant 💡", desc: "Instant cash (based on passive)", durationMs: 0, tapMult: 1.0, passMult: 1.0, instant: true },
-  ];
+  function applyBg() {
+    const s = currentStage(state.up.cityDev);
+    document.body.style.background = BGS[s.bg] || BGS.night;
+  }
 
   // ---------- State ----------
   const state = {
     cash: 0,
     totalEarned: 0,
-
-    tapLevel: 0,
-    passiveLevel: 0,
-    cityDevLevel: 0,
-
-    prestigePoints: 0,     // "permanent multiplier currency"
-    prestigeMult: 1,       // derived from prestigePoints
-
-    districts: structuredClone(DISTRICTS),
-
-    // event system
-    activeEvent: null,     // { id, endsAt, tapMult, passMult }
-    pendingEvent: null,    // { id, name, desc, ... }
-    nextEventAt: now() + 45_000,
-
     lastTickAt: now(),
     lastSaveAt: 0,
+
+    // 18 tiles (good on desktop + mobile)
+    tiles: Array.from({ length: 18 }, () => ({ lvl: 0 })),
+
+    // 5 upgrades
+    up: {
+      tapBoost: 0,     // increases per tap
+      passive: 0,      // passive per second
+      cityDev: 0,      // global multiplier + unlock stage changes
+      buildSpeed: 0,   // higher chance to upgrade tile levels on click
+      zoning: 0,       // tile level value multiplier (makes buildings worth more)
+    },
+
+    // Events (simple)
+    event: {
+      active: null,   // { name, endsAt, tapMult, passMult }
+      pending: null,  // { name, desc, ... }
+      nextAt: now() + 35_000
+    }
   };
 
   // ---------- Economy ----------
-  function basePerTap() {
-    // tap level is very strong early, slightly less later
-    return 1 + state.tapLevel * 1.25 + Math.pow(state.tapLevel, 1.15) * 0.35;
-  }
-  function basePassivePerSec() {
-    return state.passiveLevel * 0.35 + Math.pow(state.passiveLevel, 1.20) * 0.05;
+  function cityMult() {
+    return 1 + state.up.cityDev * 0.06; // 6% per level
   }
 
-  function cityDevMult() {
-    // city dev boosts both tap & passive
-    return 1 + state.cityDevLevel * 0.06;
+  function tileValueMult() {
+    // zoning makes each building level contribute more to income
+    return 1 + state.up.zoning * 0.12; // 12% per level
   }
 
-  function districtMults() {
-    let tap = 1, pas = 1, luck = 1;
-    for (const d of state.districts) {
-      if (d.level > 0) {
-        tap *= Math.pow(d.tapMult ?? 1, d.level);
-        pas *= Math.pow(d.passMult ?? 1, d.level);
-        if (d.luck) luck *= Math.pow(d.luck, d.level);
-      }
-    }
-    return { tap, pas, luck };
+  function tilesScore() {
+    // total "development score" from tiles: sum(level)
+    return state.tiles.reduce((a, t) => a + t.lvl, 0);
   }
 
-  function currentEventMults() {
-    if (!state.activeEvent) return { tap: 1, pas: 1 };
-    return { tap: state.activeEvent.tapMult ?? 1, pas: state.activeEvent.passMult ?? 1 };
+  function perTapBase() {
+    return 1 + state.up.tapBoost * 1.6 + Math.pow(state.up.tapBoost, 1.18) * 0.25;
   }
 
-  function prestigeMultiplierFromPoints(points) {
-    // smooth scaling: 1 + 0.25*pp + diminishing
-    return 1 + points * 0.25 + Math.pow(points, 0.85) * 0.05;
+  function passiveBasePerSec() {
+    return state.up.passive * 0.35 + Math.pow(state.up.passive, 1.22) * 0.06;
+  }
+
+  function eventMults() {
+    if (!state.event.active) return { tap: 1, pas: 1 };
+    return { tap: state.event.active.tapMult, pas: state.event.active.passMult };
+  }
+
+  function tileIncomeBonus() {
+    // tiles add meaningful visible progression: more buildings = more money
+    // scaled so it matters, but doesn’t explode instantly
+    return (tilesScore() * 0.18) * tileValueMult();
   }
 
   function perTap() {
-    const { tap: dTap } = districtMults();
-    const { tap: eTap } = currentEventMults();
-    return basePerTap() * cityDevMult() * state.prestigeMult * dTap * eTap;
+    const e = eventMults();
+    return (perTapBase() + tileIncomeBonus()) * cityMult() * e.tap;
   }
 
   function passivePerSec() {
-    const { pas: dPas } = districtMults();
-    const { pas: ePas } = currentEventMults();
-    return basePassivePerSec() * cityDevMult() * state.prestigeMult * dPas * ePas;
+    const e = eventMults();
+    return (passiveBasePerSec() + tileIncomeBonus() * 0.25) * cityMult() * e.pas;
   }
 
-  function costTap() {
-    return 10 * Math.pow(1.18, state.tapLevel) * (1 + state.tapLevel * 0.02);
-  }
-  function costPassive() {
-    return 25 * Math.pow(1.20, state.passiveLevel) * (1 + state.passiveLevel * 0.02);
-  }
-  function costCityDev() {
-    return 120 * Math.pow(1.22, state.cityDevLevel) * (1 + state.cityDevLevel * 0.03);
-  }
-  function costDistrictUpgrade(d) {
-    // district levels are optional side scaling
-    return (300 + d.req * 20) * Math.pow(1.35, d.level);
-  }
-
-  // ---------- City View ----------
-  function currentStage() {
-    let stage = CITY_STAGES[0];
-    for (const s of CITY_STAGES) {
-      if (state.cityDevLevel >= s.req) stage = s;
-    }
-    return stage;
-  }
-
-  function skylineString() {
-    const s = currentStage();
-    // add more buildings with city dev level
-    const extra = clamp(Math.floor(state.cityDevLevel / 18), 0, 14);
-    const base = s.skyline.slice();
-    const fillers = ["🏠","🏢","🏬","🏦","🏥","🏫","🏭","🌳","🚦","🚇"];
-    for (let i = 0; i < extra; i++) base.push(fillers[i % fillers.length]);
-    return base.join(" ");
-  }
-
-  function applyBackground() {
-    const s = currentStage();
-    document.body.style.background = BACKGROUNDS[s.bg] || BACKGROUNDS.night;
-  }
+  // ---------- Costs (5 upgrades) ----------
+  function costTapBoost()   { return 12  * Math.pow(1.18, state.up.tapBoost); }
+  function costPassive()    { return 30  * Math.pow(1.20, state.up.passive); }
+  function costCityDev()    { return 160 * Math.pow(1.22, state.up.cityDev) * (1 + state.up.cityDev * 0.02); }
+  function costBuildSpeed() { return 90  * Math.pow(1.24, state.up.buildSpeed); }
+  function costZoning()     { return 110 * Math.pow(1.25, state.up.zoning); }
 
   // ---------- Save / Load ----------
   function exportSave() {
     const data = {
-      v: 2,
+      v: 3,
       cash: state.cash,
       totalEarned: state.totalEarned,
-      tapLevel: state.tapLevel,
-      passiveLevel: state.passiveLevel,
-      cityDevLevel: state.cityDevLevel,
-      prestigePoints: state.prestigePoints,
-      districts: state.districts.map(d => ({ id: d.id, level: d.level })),
-      activeEvent: state.activeEvent,
-      pendingEvent: state.pendingEvent,
-      nextEventAt: state.nextEventAt,
+      tiles: state.tiles,
+      up: state.up,
+      event: state.event,
       lastTickAt: state.lastTickAt
     };
     return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
@@ -336,165 +298,158 @@ document.addEventListener("DOMContentLoaded", () => {
   function importSave(code) {
     const json = decodeURIComponent(escape(atob(code.trim())));
     const data = safeParse(json, null);
-    if (!data || (data.v !== 2 && data.v !== 1)) throw new Error("Bad save.");
+    if (!data || data.v !== 3) throw new Error("Bad save");
 
-    // basic fields
     state.cash = Number(data.cash ?? 0) || 0;
     state.totalEarned = Number(data.totalEarned ?? 0) || 0;
-    state.tapLevel = Number(data.tapLevel ?? 0) || 0;
-    state.passiveLevel = Number(data.passiveLevel ?? 0) || 0;
-    state.cityDevLevel = Number(data.cityDevLevel ?? 0) || 0;
-    state.prestigePoints = Number(data.prestigePoints ?? 0) || 0;
-
-    // districts by id
-    const byId = new Map((data.districts ?? []).map(x => [x.id, x.level]));
-    state.districts = structuredClone(DISTRICTS).map(d => ({ ...d, level: Number(byId.get(d.id) ?? 0) || 0 }));
-
-    state.activeEvent = data.activeEvent ?? null;
-    state.pendingEvent = data.pendingEvent ?? null;
-    state.nextEventAt = Number(data.nextEventAt ?? (now() + 45_000)) || (now() + 45_000);
+    state.tiles = Array.isArray(data.tiles) ? data.tiles.map(t => ({ lvl: clampInt(t.lvl, 0, MAX_LVL) })) : state.tiles;
+    state.up = {
+      tapBoost: clampInt(data.up?.tapBoost, 0, 1e9),
+      passive: clampInt(data.up?.passive, 0, 1e9),
+      cityDev: clampInt(data.up?.cityDev, 0, 1e9),
+      buildSpeed: clampInt(data.up?.buildSpeed, 0, 1e9),
+      zoning: clampInt(data.up?.zoning, 0, 1e9),
+    };
+    state.event = data.event ?? state.event;
     state.lastTickAt = Number(data.lastTickAt ?? now()) || now();
+  }
 
-    state.prestigeMult = prestigeMultiplierFromPoints(state.prestigePoints);
-    applyBackground();
-    render();
-    toast("✅ Save imported");
+  function clampInt(n, a, b) {
+    n = Number(n);
+    if (!Number.isFinite(n)) return a;
+    return Math.max(a, Math.min(b, Math.floor(n)));
   }
 
   function save() {
-    const payload = exportSave();
-    localStorage.setItem(SAVE_KEY, payload);
+    localStorage.setItem(SAVE_KEY, exportSave());
     state.lastSaveAt = now();
   }
 
   function load() {
     const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) {
-      state.prestigeMult = prestigeMultiplierFromPoints(state.prestigePoints);
-      applyBackground();
-      return;
-    }
-    try {
-      importSave(raw);
-      toast("✅ Save loaded");
-    } catch (e) {
-      console.warn("Save load failed:", e);
-      toast("⚠️ Save load failed (starting fresh)");
-    }
-  }
-
-  // ---------- Prestige ----------
-  function prestigeGainEstimate() {
-    // based on lifetime earned: sqrt scaling
-    const gained = Math.floor(Math.sqrt(state.totalEarned / 5000));
-    return Math.max(0, gained - state.prestigePoints);
-  }
-
-  function doPrestige() {
-    const gain = prestigeGainEstimate();
-    if (gain <= 0) {
-      toast("Not enough progress to prestige yet.");
-      return;
-    }
-    state.prestigePoints += gain;
-    state.prestigeMult = prestigeMultiplierFromPoints(state.prestigePoints);
-
-    // reset progress
-    state.cash = 0;
-    state.tapLevel = 0;
-    state.passiveLevel = 0;
-    state.cityDevLevel = 0;
-
-    // keep districts but reset district levels (optional: keep them; here we reset for balance)
-    state.districts = structuredClone(DISTRICTS);
-
-    // reset events
-    state.activeEvent = null;
-    state.pendingEvent = null;
-    state.nextEventAt = now() + 25_000;
-    state.lastTickAt = now();
-
-    applyBackground();
-    render();
-    save();
-    toast(`✨ Prestige! +${gain} PP`);
+    if (!raw) return;
+    try { importSave(raw); } catch (e) { console.warn("Save load failed", e); }
   }
 
   // ---------- Events ----------
-  function trySpawnEvent() {
-    if (state.pendingEvent || state.activeEvent) return;
-    if (now() < state.nextEventAt) return;
+  const EVENTS = [
+    { name: "City Festival 🎉", desc: "2× Tap for 25s", duration: 25_000, tapMult: 2.0, passMult: 1.0 },
+    { name: "Construction Boom 🏗️", desc: "2× Passive for 25s", duration: 25_000, tapMult: 1.0, passMult: 2.0 },
+    { name: "Investment Grant 💡", desc: "Instant cash payout", duration: 0, tapMult: 1.0, passMult: 1.0, instant: true },
+  ];
 
-    const { luck } = districtMults();
-    const roll = Math.random() * (1 / clamp(luck, 1, 3.5)); // higher luck = more frequent
-    // base ~ 55s to 95s between events, modified by luck in schedule, and roll gate
-    if (roll > 0.55) {
-      state.nextEventAt = now() + (55_000 + Math.random() * 40_000) / clamp(luck, 1, 3.5);
+  function maybeSpawnEvent() {
+    if (state.event.pending || state.event.active) return;
+    if (now() < state.event.nextAt) return;
+
+    // small chance gate; city dev increases frequency a bit
+    const luck = 1 + state.up.cityDev * 0.01;
+    if (Math.random() > 0.55 / Math.min(2.2, luck)) {
+      state.event.nextAt = now() + 35_000 + Math.random() * 35_000;
       return;
     }
 
-    const e = EVENTS[Math.floor(Math.random() * EVENTS.length)];
-    state.pendingEvent = { ...e };
-    // next event schedule set after resolved
+    state.event.pending = { ...EVENTS[Math.floor(Math.random() * EVENTS.length)] };
   }
 
-  function activatePendingEvent() {
-    const e = state.pendingEvent;
+  function activateEvent() {
+    const e = state.event.pending;
     if (!e) return;
 
     if (e.instant) {
-      // grant based on passive, plus a small city-dev factor
-      const grant = passivePerSec() * (15 + state.cityDevLevel * 0.15);
+      const grant = passivePerSec() * (12 + state.up.cityDev * 0.25);
       addCash(grant);
-      toast(`💡 Grant received: +${fmt(grant)}`);
-      state.pendingEvent = null;
-      state.nextEventAt = now() + 50_000;
+      toast(`💡 Grant: +$${fmt(grant)}`);
+      state.event.pending = null;
+      state.event.nextAt = now() + 45_000;
       render();
       return;
     }
 
-    state.activeEvent = {
-      id: e.id,
+    state.event.active = {
       name: e.name,
-      desc: e.desc,
-      tapMult: e.tapMult ?? 1,
-      passMult: e.passMult ?? 1,
-      endsAt: now() + (e.durationMs ?? 30_000),
+      tapMult: e.tapMult,
+      passMult: e.passMult,
+      endsAt: now() + e.duration
     };
-    state.pendingEvent = null;
-    state.nextEventAt = now() + 70_000;
+    state.event.pending = null;
+    state.event.nextAt = now() + 60_000;
+    toast("✅ Event activated");
     render();
-    toast(`✅ Event started`);
   }
 
-  function tickEvents() {
-    if (state.activeEvent && now() >= state.activeEvent.endsAt) {
-      state.activeEvent = null;
+  function tickEventEnd() {
+    if (state.event.active && now() >= state.event.active.endsAt) {
+      state.event.active = null;
       toast("⏱️ Event ended");
       render();
     }
   }
 
-  // ---------- Cash ----------
+  // ---------- Tile visuals ----------
+  function buildChance() {
+    // buildSpeed makes tile upgrades VERY noticeable
+    // base 45% + 6% per level, capped at 92%
+    return Math.min(0.92, 0.45 + state.up.buildSpeed * 0.06);
+  }
+
+  function clickTile(i) {
+    // earn money
+    const gain = perTap();
+    addCash(gain);
+
+    // visibly upgrade the clicked tile
+    const t = state.tiles[i];
+    if (t.lvl < MAX_LVL && Math.random() < buildChance()) {
+      t.lvl++;
+      // tiny reward so leveling feels good
+      addCash(2 + t.lvl * 1.5);
+    }
+
+    // ALSO: small chance to upgrade a random other tile (city "spreads") as City Dev grows
+    if (state.up.cityDev >= 10 && Math.random() < Math.min(0.18, state.up.cityDev * 0.003)) {
+      const j = Math.floor(Math.random() * state.tiles.length);
+      if (state.tiles[j].lvl < MAX_LVL) state.tiles[j].lvl++;
+    }
+
+    render();
+  }
+
+  function skylineString() {
+    // skyline is based on the highest tiles (top 12)
+    const lvls = state.tiles.map(t => t.lvl).sort((a,b) => b - a).slice(0, 12);
+    // always show something
+    if (lvls.every(x => x === 0)) return "⬜ ⬜ ⬜ ⬜ ⬜ ⬜ ⬜ ⬜ ⬜ ⬜ ⬜ ⬜";
+    return lvls.map(l => BUILDING[l]).join(" ");
+  }
+
+  // ---------- Cash helpers ----------
   function addCash(amount) {
     if (!Number.isFinite(amount) || amount <= 0) return;
     state.cash += amount;
     state.totalEarned += amount;
   }
 
+  // ---------- Buying upgrades ----------
+  function buy(cost, applyFn, msg) {
+    if (state.cash < cost) return toast("Not enough cash.");
+    state.cash -= cost;
+    applyFn();
+    toast(msg);
+    render();
+    save();
+  }
+
   // ---------- UI ----------
   function render() {
-    const stage = currentStage();
-    applyBackground();
+    applyBg();
+    const stage = currentStage(state.up.cityDev);
+    const e = eventMults();
 
-    const dUnlocked = state.districts.filter(d => state.cityDevLevel >= d.req);
-    const { tap: dTap, pas: dPas } = districtMults();
-    const eMults = currentEventMults();
-
-    const eventStatus = state.activeEvent
-      ? `${state.activeEvent.name} (ends in ${Math.max(0, Math.ceil((state.activeEvent.endsAt - now()) / 1000))}s)`
-      : state.pendingEvent
-        ? `${state.pendingEvent.name}`
+    const eventLine = state.event.active
+      ? `${state.event.active.name} (ends in ${Math.max(0, Math.ceil((state.event.active.endsAt - now())/1000))}s)`
+      : state.event.pending
+        ? `${state.event.pending.name} — ${state.event.pending.desc}`
         : "No event right now";
 
     root.innerHTML = `
@@ -502,7 +457,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="top">
           <div>
             <h1>Flip City</h1>
-            <div class="sub">Build a city from nothing → prestige → rebuild faster.</div>
+            <div class="sub">Click tiles to build. Buildings = visible progress + more income.</div>
           </div>
           <div class="row">
             <button class="btn small" id="btnExport">Export</button>
@@ -511,85 +466,66 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         </div>
 
-        <div class="spacer"></div>
-
-        <div class="cityBox card">
-          <h2>City View</h2>
-          <div class="skyline" title="${stage.name}">${skylineString()}</div>
-          <div class="stageLine">
-            <span class="pill">Stage: <b>${stage.name}</b></span>
-            <span class="pill">City Dev: <b>${state.cityDevLevel}</b></span>
-            <span class="pill">District Boost: <b>${(dTap*dPas).toFixed(2)}×</b></span>
-            <span class="pill">Prestige: <b>${state.prestigePoints}</b> PP → <b>${state.prestigeMult.toFixed(2)}×</b></span>
-          </div>
-
-          <div class="hr"></div>
-
-          <div class="eventBox">
-            <div class="left">
-              <div class="name">City Event</div>
-              <div class="desc">${eventStatus}</div>
-              <div class="desc muted">Tap mult: ${eMults.tap.toFixed(2)}× · Passive mult: ${eMults.pas.toFixed(2)}×</div>
+        <div class="row" style="margin-top:12px;">
+          <div class="skyBox card" style="flex:1 1 520px;">
+            <h2>Skyline</h2>
+            <div class="skyline" title="Your skyline grows as tiles level up.">${skylineString()}</div>
+            <div class="row" style="margin-top:10px;">
+              <span class="pill">Stage: <b>${stage.name}</b></span>
+              <span class="pill">City Dev: <b>${state.up.cityDev}</b></span>
+              <span class="pill">Build chance: <b>${Math.round(buildChance()*100)}%</b></span>
+              <span class="pill">Event: <b>${e.tap.toFixed(2)}× tap</b> · <b>${e.pas.toFixed(2)}× passive</b></span>
             </div>
-            <div>
-              ${state.pendingEvent ? `<button class="btn primary" id="btnEvent">Activate</button>` : `<button class="btn" id="btnEvent" disabled style="opacity:.55;cursor:not-allowed;">No Event</button>`}
+
+            <div class="hr"></div>
+
+            <div class="row" style="justify-content:space-between; align-items:center;">
+              <div class="sub" style="max-width: 720px;">
+                <b>City Event:</b> ${eventLine}
+              </div>
+              <button class="btn ${state.event.pending ? "primary" : ""}" id="btnEvent" ${state.event.pending ? "" : "disabled"} style="${state.event.pending ? "" : "opacity:.55; cursor:not-allowed;"}">
+                ${state.event.pending ? "Activate" : "No Event"}
+              </button>
             </div>
           </div>
         </div>
 
-        <div class="spacer"></div>
-
-        <div class="row">
-          <div class="card" style="flex: 1 1 360px;">
+        <div class="grid" style="margin-top:12px;">
+          <div class="card">
             <h2>Stats</h2>
-            <div class="statgrid">
-              <div class="stat">
-                <div class="k">Cash</div>
-                <div class="v">$${fmt(state.cash)}</div>
-              </div>
-              <div class="stat">
-                <div class="k">Total Earned</div>
-                <div class="v">$${fmt(state.totalEarned)}</div>
-              </div>
-              <div class="stat">
-                <div class="k">Per Tap</div>
-                <div class="v">$${fmt(perTap())}</div>
-              </div>
-              <div class="stat">
-                <div class="k">Passive / sec</div>
-                <div class="v">$${fmt(passivePerSec())}</div>
-              </div>
+            <div class="statsGrid">
+              <div class="stat"><div class="k">Cash</div><div class="v">$${fmt(state.cash)}</div></div>
+              <div class="stat"><div class="k">Total Earned</div><div class="v">$${fmt(state.totalEarned)}</div></div>
+              <div class="stat"><div class="k">Per Tap</div><div class="v">$${fmt(perTap())}</div></div>
+              <div class="stat"><div class="k">Passive / sec</div><div class="v">$${fmt(passivePerSec())}</div></div>
             </div>
 
             <div class="hr"></div>
 
-            <div class="row">
-              <button class="btn primary" id="btnTap">Tap (+$${fmt(perTap())})</button>
-              <button class="btn" id="btnPrestige">Prestige (+${prestigeGainEstimate()} PP)</button>
-            </div>
-
-            <div class="sub muted" style="margin-top:10px;">
-              Tip: Prestige when it gives <b>+2× to +3×</b> speed-up (usually +2 PP or more early).
+            <button class="btn primary" id="btnTap">Tap Anywhere (+$${fmt(perTap())})</button>
+            <div class="sub" style="margin-top:10px;">
+              Tip: Clicking tiles is best because it also <b>builds</b> (visible upgrades).
             </div>
           </div>
 
-          <div class="card" style="flex: 2 1 520px;">
-            <h2>Upgrades</h2>
+          <div class="card">
+            <h2>Upgrades (5)</h2>
             <div class="shop">
-              ${shopItemHtml("Tap Boost", `Increase per-tap income.`, `Level ${state.tapLevel}`, costTap(), "buyTap")}
-              ${shopItemHtml("Passive Income", `Earn money automatically each second.`, `Level ${state.passiveLevel}`, costPassive(), "buyPassive")}
-              ${shopItemHtml("City Development", `Boosts everything & unlocks districts/stages.`, `Level ${state.cityDevLevel}`, costCityDev(), "buyCityDev")}
+              ${shopItem("Tap Boost", "More money per click.", `Level ${state.up.tapBoost}`, costTapBoost(), "buyTapBoost")}
+              ${shopItem("Passive Income", "Earn money every second.", `Level ${state.up.passive}`, costPassive(), "buyPassive")}
+              ${shopItem("City Development", "Boosts all income + unlock stages.", `Level ${state.up.cityDev}`, costCityDev(), "buyCityDev")}
+              ${shopItem("Build Speed", "Tiles level up more often (VISUAL!).", `Level ${state.up.buildSpeed}`, costBuildSpeed(), "buyBuildSpeed")}
+              ${shopItem("Zoning Policy", "Buildings are worth more.", `Level ${state.up.zoning}`, costZoning(), "buyZoning")}
             </div>
+          </div>
+        </div>
 
-            <div class="hr"></div>
-
-            <h2>Districts</h2>
-            <div class="sub muted" style="margin: 0 0 10px 0;">
-              Districts unlock as City Development increases. They give multiplicative boosts.
-            </div>
-
-            <div class="shop">
-              ${state.districts.map(d => districtHtml(d)).join("")}
+        <div class="row" style="margin-top:12px;">
+          <div class="card" style="flex: 1 1 100%;">
+            <h2>City Tiles (click to build)</h2>
+            <div class="sub">You should see tiles change from ⬜ → 🏠 → 🏢 → 🏬 → 🏙️ → 🌆</div>
+            <div class="tilesWrap" style="margin-top:10px;">
+              <div class="tiles" id="tiles"></div>
             </div>
           </div>
         </div>
@@ -599,19 +535,16 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
 
     // Wire buttons
-    document.getElementById("btnTap").onclick = () => {
-      addCash(perTap());
-      renderQuickStats();
-    };
+    document.getElementById("btnTap").onclick = () => { addCash(perTap()); render(); };
 
-    document.getElementById("buyTap").onclick = () => buy(costTap(), () => state.tapLevel++, "Tap Boost upgraded!");
-    document.getElementById("buyPassive").onclick = () => buy(costPassive(), () => state.passiveLevel++, "Passive upgraded!");
-    document.getElementById("buyCityDev").onclick = () => buy(costCityDev(), () => state.cityDevLevel++, "City Development upgraded!");
-
-    document.getElementById("btnPrestige").onclick = doPrestige;
+    document.getElementById("buyTapBoost").onclick = () => buy(costTapBoost(), () => state.up.tapBoost++, "Tap Boost upgraded!");
+    document.getElementById("buyPassive").onclick = () => buy(costPassive(), () => state.up.passive++, "Passive Income upgraded!");
+    document.getElementById("buyCityDev").onclick = () => buy(costCityDev(), () => state.up.cityDev++, "City Development upgraded!");
+    document.getElementById("buyBuildSpeed").onclick = () => buy(costBuildSpeed(), () => state.up.buildSpeed++, "Build Speed upgraded!");
+    document.getElementById("buyZoning").onclick = () => buy(costZoning(), () => state.up.zoning++, "Zoning Policy upgraded!");
 
     const btnEvent = document.getElementById("btnEvent");
-    if (btnEvent && state.pendingEvent) btnEvent.onclick = activatePendingEvent;
+    if (btnEvent && state.event.pending) btnEvent.onclick = activateEvent;
 
     document.getElementById("btnExport").onclick = () => {
       const code = exportSave();
@@ -622,28 +555,29 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btnImport").onclick = () => {
       const code = prompt("Paste your save code:");
       if (!code) return;
-      try { importSave(code); save(); }
+      try { importSave(code); save(); toast("✅ Save imported"); render(); }
       catch { toast("❌ Import failed"); }
     };
 
     document.getElementById("btnReset").onclick = () => {
-      const ok = confirm("Reset EVERYTHING? This cannot be undone (unless you exported a save).");
+      const ok = confirm("Reset everything? (Export first if you want a backup.)");
       if (!ok) return;
       localStorage.removeItem(SAVE_KEY);
       location.reload();
     };
 
-    for (const d of state.districts) {
-      const btn = document.getElementById(`buyDistrict_${d.id}`);
-      if (!btn) continue;
-      btn.onclick = () => {
-        if (state.cityDevLevel < d.req) { toast("Locked — raise City Development"); return; }
-        buy(costDistrictUpgrade(d), () => d.level++, `${d.name} upgraded!`);
-      };
-    }
+    // Render tiles
+    const tilesEl = document.getElementById("tiles");
+    state.tiles.forEach((t, i) => {
+      const btn = document.createElement("div");
+      btn.className = "tile";
+      btn.innerHTML = `<div class="icon">${BUILDING[t.lvl]}</div><div class="lvl">Tile Lv ${t.lvl}</div>`;
+      btn.onclick = () => clickTile(i);
+      tilesEl.appendChild(btn);
+    });
   }
 
-  function shopItemHtml(title, desc, lvl, cost, id) {
+  function shopItem(title, desc, meta, cost, id) {
     const affordable = state.cash >= cost;
     return `
       <div class="shopItem">
@@ -651,82 +585,35 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="d">${desc}</div>
         <div class="b">
           <div>
-            <div class="lvl">${lvl}</div>
-            <div class="cost">Cost: $${fmt(cost)}</div>
+            <div class="meta">${meta}</div>
+            <div class="meta">Cost: <b>$${fmt(cost)}</b></div>
           </div>
-          <button class="btn ${affordable ? "primary" : ""}" id="${id}">
-            Buy
-          </button>
+          <button class="btn ${affordable ? "primary" : ""}" id="${id}">Buy</button>
         </div>
       </div>
     `;
   }
 
-  function districtHtml(d) {
-    const locked = state.cityDevLevel < d.req;
-    const cost = costDistrictUpgrade(d);
-    const affordable = state.cash >= cost;
-    const boostTxt = d.desc;
-    return `
-      <div class="shopItem" style="${locked ? "opacity:.65" : ""}">
-        <div class="t">${d.icon} ${d.name}</div>
-        <div class="d">${boostTxt}</div>
-        <div class="d muted">Unlocks at City Dev ${d.req}</div>
-        <div class="b">
-          <div>
-            <div class="lvl">Level ${d.level}</div>
-            <div class="cost">Cost: $${fmt(cost)}</div>
-          </div>
-          <button class="btn ${(!locked && affordable) ? "primary" : ""}" id="buyDistrict_${d.id}" ${locked ? "disabled" : ""} style="${locked ? "cursor:not-allowed;" : ""}">
-            ${locked ? "Locked" : "Upgrade"}
-          </button>
-        </div>
-      </div>
-    `;
-  }
-
-  function buy(cost, applyFn, msg) {
-    if (state.cash < cost) { toast("Not enough cash."); return; }
-    state.cash -= cost;
-    applyFn();
-    state.prestigeMult = prestigeMultiplierFromPoints(state.prestigePoints);
-    applyBackground();
-    render();
-    toast(msg);
-    save();
-  }
-
-  // Update only key numbers quickly after tap (keeps UI snappy)
-  function renderQuickStats() {
-    // easiest reliable approach: rerender (still fast)
-    render();
-  }
-
-  // ---------- Main Loop ----------
+  // ---------- Main loop ----------
   function tick() {
     const t = now();
     const dt = (t - state.lastTickAt) / 1000;
     state.lastTickAt = t;
 
     // passive income
-    const income = passivePerSec() * dt;
-    addCash(income);
+    addCash(passivePerSec() * dt);
 
     // events
-    trySpawnEvent();
-    tickEvents();
+    maybeSpawnEvent();
+    tickEventEnd();
 
-    // autosave (every ~10s)
+    // autosave
     if (t - state.lastSaveAt > 10_000) save();
-
-    // refresh UI (every ~250ms)
-    // (We keep it simple: rerender each tick interval.)
   }
 
   // ---------- Start ----------
   load();
-  state.prestigeMult = prestigeMultiplierFromPoints(state.prestigePoints);
-  applyBackground();
+  applyBg();
   render();
 
   setInterval(() => {
