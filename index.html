@@ -4,36 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<head>
-  ...
-  <!-- Google AdSense -->
-  <script async
-    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXX"
-    crossorigin="anonymous">
-  </script>
-  ...
-</head>
-
-<div class="adSlot">
-  <!-- AdSense Ad -->
-  <ins class="adsbygoogle"
-       style="display:block"
-       data-ad-client="ca-pub-XXXXXXXXXXXX"
-       data-ad-slot="1234567890"
-       data-ad-format="auto"
-       data-full-width-responsive="true"></ins>
-  <script>
-    
-    (adsbygoogle = window.adsbygoogle || []).push({});
-  </script>
-</div>
-
   <!-- PWA -->
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#0b1220">
   <link rel="icon" href="/icons/icon-192.png">
 
   <title>City Flip</title>
+
+  <!-- Google AdSense (HEAD only, once) -->
+  <script async
+    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXX"
+    crossorigin="anonymous"></script>
 
   <style>
     * { box-sizing: border-box; }
@@ -398,17 +379,33 @@
           <div class="pill" id="boostPill">2x • 00:00</div>
         </div>
 
+        <!-- AdSense Banner Slot -->
         <div class="adSlot" id="bannerSlot">
-          Banner Ad Slot
-          <small>(Insert your ad unit here later)</small>
+          <ins class="adsbygoogle"
+               style="display:block"
+               data-ad-client="ca-pub-XXXXXXXXXXXX"
+               data-ad-slot="1234567890"
+               data-ad-format="auto"
+               data-full-width-responsive="true"></ins>
+          <script>
+            (adsbygoogle = window.adsbygoogle || []).push({});
+          </script>
         </div>
 
         <h2 style="margin:16px 0 10px;">City Tiles</h2>
         <div id="tiles" class="tiles"></div>
 
+        <!-- Optional second AdSense slot -->
         <div class="adSlot" id="footerSlot">
-          Footer Ad Slot
-          <small>(Optional second ad placement)</small>
+          <ins class="adsbygoogle"
+               style="display:block"
+               data-ad-client="ca-pub-XXXXXXXXXXXX"
+               data-ad-slot="1234567890"
+               data-ad-format="auto"
+               data-full-width-responsive="true"></ins>
+          <script>
+            (adsbygoogle = window.adsbygoogle || []).push({});
+          </script>
         </div>
 
         <div class="log" id="log"></div>
