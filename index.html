@@ -65,6 +65,7 @@
       z-index: 10;
     }
     header h1 { margin: 0; font-size: 18px; letter-spacing: .3px; }
+
     .wrap { max-width: 980px; margin: 0 auto; padding: 14px; }
     .grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 14px; }
     @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
@@ -142,19 +143,22 @@
       gap: 10px;
     }
 
-    /* makes tiles visible + tappable */
     .tileBtn {
       width: 100%;
       border: 0;
       border-radius: 12px;
-      padding: 14px 12px;
+      padding: 12px 10px;
       font-weight: 950;
       cursor: pointer;
       color: var(--btnText);
       background: var(--btn);
-      font-size: 16px;
-      min-height: 70px;
+      min-height: 76px;
+      display: grid;
+      gap: 4px;
+      align-content: center;
+      text-align: left;
     }
+    .tileBtn small { opacity: .75; font-weight: 900; }
 
     .log {
       margin-top: 10px;
@@ -180,7 +184,7 @@
     .shopItem p { margin: 0; opacity: .9; font-size: 13px; color: var(--muted); }
     .shopItem .price { margin-top: 8px; font-weight: 950; }
 
-    .shopBtn {
+    .shopBtn, .modalBtn {
       width: 100%;
       border: 0;
       border-radius: 12px;
@@ -190,6 +194,33 @@
       color: var(--btnText);
       background: var(--btn);
     }
+    .modalBtn.secondary{
+      color:#fff;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.18);
+    }
+    .row{ display:flex; gap:10px; }
+
+    .modalBackdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 30;
+    }
+    .modal {
+      width: 100%;
+      max-width: 440px;
+      background: rgba(11,18,32,.96);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 24px 80px rgba(0,0,0,.55);
+    }
+    .modal h3 { margin: 0 0 8px; }
+    .modal p { margin: 0 0 12px; opacity: .9; }
 
     .toast {
       position: fixed;
@@ -240,6 +271,11 @@
           </div>
         </div>
 
+        <div class="boostBar" id="boostBar">
+          <div>Boost Active</div>
+          <div class="pill" id="boostPill">2x • 00:00</div>
+        </div>
+
         <h2 style="margin:16px 0 10px;">City Tiles</h2>
         <div id="tiles" class="tiles"></div>
 
@@ -269,7 +305,19 @@
           <div class="price" id="tileUpPrice">$75</div>
           <button class="shopBtn" id="buyTileUp">Buy</button>
         </div>
+
+        <p style="margin-top:12px;opacity:.85;font-size:13px;">
+          Autosaves every few seconds + on background/close.
+        </p>
       </div>
+    </div>
+  </div>
+
+  <div class="modalBackdrop" id="offlineModal">
+    <div class="modal">
+      <h3>Welcome back!</h3>
+      <p id="offlineText">You earned $0 while away.</p>
+      <button class="modalBtn" id="offlineOk">Collect</button>
     </div>
   </div>
 
