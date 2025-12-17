@@ -25,12 +25,9 @@
   <style>
     *{ box-sizing:border-box; }
     :root{
-      --bgA:#1a0f2e;
       --bgB:#0a1022;
-      --panel: rgba(10,14,28,.72);
       --panel2: rgba(255,255,255,.06);
       --border: rgba(255,255,255,.10);
-      --border2: rgba(255,255,255,.16);
       --text:#fff;
       --muted: rgba(255,255,255,.85);
       --shadow: 0 24px 80px rgba(0,0,0,.55);
@@ -55,7 +52,26 @@
         radial-gradient(circle at top, #2a1550, var(--bgB));
     }
 
-    /* HERO */
+    /* themes (optional vibe shift) */
+    body[data-theme="sunset"]{
+      background:
+        radial-gradient(900px 540px at 50% -80px, rgba(255,120,40,.28), transparent 60%),
+        radial-gradient(900px 540px at 50% 140px, rgba(255,60,160,.18), transparent 55%),
+        radial-gradient(circle at top, #3b0f2a, #120612);
+    }
+    body[data-theme="emerald"]{
+      background:
+        radial-gradient(900px 540px at 50% -80px, rgba(0,220,140,.22), transparent 60%),
+        radial-gradient(900px 540px at 50% 140px, rgba(0,140,255,.12), transparent 55%),
+        radial-gradient(circle at top, #08362a, #041411);
+    }
+    body[data-theme="midnight"]{
+      background:
+        radial-gradient(900px 540px at 50% -80px, rgba(120,160,255,.18), transparent 60%),
+        radial-gradient(900px 540px at 50% 140px, rgba(255,255,255,.08), transparent 55%),
+        radial-gradient(circle at top, #0f1b2a, #060a12);
+    }
+
     .hero{
       position: sticky;
       top: 0;
@@ -92,10 +108,7 @@
       place-items:center;
       font-size: 20px;
     }
-    .logoText{
-      line-height: 1.05;
-      min-width: 0;
-    }
+    .logoText{ line-height: 1.05; min-width: 0; }
     .logoText .title{
       font-size: 20px;
       font-weight: 1000;
@@ -104,11 +117,7 @@
       overflow:hidden;
       text-overflow:ellipsis;
     }
-    .logoText .subtitle{
-      margin-top: 2px;
-      font-size: 12px;
-      opacity: .85;
-    }
+    .logoText .subtitle{ margin-top: 2px; font-size: 12px; opacity: .85; }
 
     .topBtns{
       display:flex;
@@ -136,7 +145,6 @@
       border: 1px solid rgba(255,82,82,.45);
     }
 
-    /* SKYLINE DECOR */
     .skyline{
       max-width: 980px;
       margin: 10px auto 0;
@@ -157,26 +165,9 @@
       height: 38px;
       background:
         linear-gradient(180deg, transparent, rgba(0,0,0,.35)),
-        repeating-linear-gradient(
-          90deg,
-          rgba(0,0,0,.0) 0 16px,
-          rgba(0,0,0,.25) 16px 22px
-        );
+        repeating-linear-gradient(90deg, rgba(0,0,0,.0) 0 16px, rgba(0,0,0,.25) 16px 22px);
       mask-image: linear-gradient(180deg, transparent, #000 40%);
       opacity: .8;
-    }
-    .skyline:after{
-      content:"";
-      position:absolute; inset: 0;
-      background:
-        linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
-      transform: translateX(-60%);
-      animation: shine 6s linear infinite;
-      opacity:.35;
-    }
-    @keyframes shine{
-      0%{ transform: translateX(-60%); }
-      100%{ transform: translateX(60%); }
     }
 
     .wrap{ max-width: 980px; margin: 0 auto; padding: 14px; }
@@ -191,7 +182,6 @@
       box-shadow: var(--shadow);
     }
 
-    /* SECTION BAR like the picture */
     .sectionBar{
       margin: 14px 0 10px;
       padding: 10px 12px;
@@ -200,6 +190,10 @@
       border: 1px solid rgba(255,255,255,.12);
       font-weight: 1000;
       letter-spacing:.2px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
     }
 
     .stats{
@@ -219,6 +213,17 @@
     .stat .label{ font-size: 12px; opacity:.85; }
     .stat .value{ margin-top: 6px; font-size: 22px; font-weight: 1000; }
 
+    .pillRow{ display:flex; gap:10px; flex-wrap:wrap; }
+    .pill{
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.22);
+      font-size: 12px;
+      font-weight: 900;
+      opacity:.95;
+    }
+
     .howto{
       margin-top: 10px;
       border-radius: 14px;
@@ -230,7 +235,6 @@
     .howto ul{ margin:0; padding-left:18px; line-height:1.55; opacity:.92; }
     .howto b{ font-weight: 1000; color: var(--gold); }
 
-    /* Tiles look like “cards” */
     .tiles{
       margin-top: 10px;
       display:grid;
@@ -254,8 +258,10 @@
       min-height: 108px;
       position: relative;
       overflow:hidden;
+      transition: transform .08s ease;
     }
-    .tileBtn:hover{ transform: translateY(-1px); }
+    .tileBtn:active{ transform: translateY(1px) scale(.995); }
+
     .tileArt{
       height: 44px;
       border-radius: 12px;
@@ -286,7 +292,6 @@
       border: 1px solid rgba(255,255,255,.10);
     }
 
-    /* Upgrades with colored buy buttons (like picture) */
     .shopItem{
       margin-top: 10px;
       padding: 12px;
@@ -324,7 +329,7 @@
     }
     .modal{
       width:100%;
-      max-width: 460px;
+      max-width: 520px;
       background: rgba(10,14,28,.96);
       border: 1px solid rgba(255,255,255,.12);
       border-radius: 18px;
@@ -343,6 +348,12 @@
       color:#0b1220;
       background: #fff;
     }
+    .modalBtn.secondary{
+      color:#fff;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.18);
+    }
+    .row{ display:flex; gap:10px; }
 
     .toast{
       position: fixed;
@@ -359,10 +370,25 @@
       z-index: 40;
       box-shadow: 0 18px 60px rgba(0,0,0,.45);
     }
+
+    /* Tutorial highlight */
+    .focusTarget{
+      position: relative;
+      z-index: 9999 !important;
+      outline: 2px solid rgba(255,209,90,.95);
+      box-shadow: 0 0 0 9999px rgba(0,0,0,.65), 0 24px 80px rgba(0,0,0,.65);
+      border-radius: 14px;
+    }
+
+    /* Settings helpers */
+    select:focus, input[type="range"]:focus {
+      outline: 2px solid rgba(255,209,90,.55);
+      outline-offset: 2px;
+    }
   </style>
 </head>
 
-<body>
+<body data-theme="neon">
   <div class="hero">
     <div class="heroInner">
       <div class="logo">
@@ -374,6 +400,10 @@
       </div>
 
       <div class="topBtns">
+        <button id="soundBtn" class="btn ghost">Sound: On</button>
+        <button id="hapticsBtn" class="btn ghost">Haptics: On</button>
+        <button id="tutorialBtn" class="btn ghost">Tutorial</button>
+        <button id="settingsBtn" class="btn ghost">Settings</button>
         <button id="installBtn" class="btn ghost" style="display:none;">Install</button>
         <button id="exportBtn" class="btn ghost">Export</button>
         <button id="importBtn" class="btn ghost">Import</button>
@@ -386,9 +416,11 @@
 
   <div class="wrap">
     <div class="grid">
-
       <div class="card">
-        <div class="sectionBar">Dashboard</div>
+        <div class="sectionBar">
+          <span>Dashboard</span>
+          <span class="pill" id="prestigePill">Prestige x1.00</span>
+        </div>
 
         <div class="stats">
           <div class="stat">
@@ -405,6 +437,18 @@
           </div>
         </div>
 
+        <div class="sectionBar" style="margin-top:14px;">Goals</div>
+        <div class="howto" id="goalsBox">
+          <div class="pillRow" style="margin-bottom:10px;">
+            <span class="pill" id="goal1">Tap 10 times</span>
+            <span class="pill" id="goal2">Reach $100</span>
+            <span class="pill" id="goal3">Buy Passive Income</span>
+            <span class="pill" id="goal4">Reach $1,000</span>
+            <span class="pill" id="goal5">Unlock Prestige ($25,000)</span>
+          </div>
+          <div style="opacity:.9;">Complete goals to earn bonus cash and speed up your start.</div>
+        </div>
+
         <div class="sectionBar" style="margin-top:14px;">How to Play</div>
         <div class="howto">
           <p>Tap tiles to earn cash, buy upgrades to earn faster, and build your city over time.</p>
@@ -414,8 +458,7 @@
             <li><b>Tap Boost</b> increases earnings per tap.</li>
             <li><b>Passive Income</b> earns money every second.</li>
             <li><b>City Development</b> boosts all tile bonuses.</li>
-            <li><b>Export</b>/<b>Import</b> to backup your save.</li>
-            <li><b>Offline earnings</b> can appear when you return.</li>
+            <li><b>Offline earnings</b> appear when you return.</li>
           </ul>
         </div>
 
@@ -449,19 +492,85 @@
           <button class="shopBtn orange" id="buyTileUp">Buy</button>
         </div>
 
+        <div class="sectionBar" style="margin-top:14px;">Prestige</div>
+        <div class="shopItem">
+          <h3>Prestige Reset</h3>
+          <p>Reset progress to gain a permanent multiplier. Recommended at $25,000+.</p>
+          <div class="price" id="prestigePrice">$25,000</div>
+          <button class="shopBtn red" id="prestigeBtn">Prestige</button>
+        </div>
+
         <p style="margin-top:12px;opacity:.85;font-size:13px;">
           Autosaves every few seconds + on background/close.
         </p>
       </div>
-
     </div>
   </div>
 
+  <!-- Offline earnings -->
   <div class="modalBackdrop" id="offlineModal">
     <div class="modal">
       <h3>Welcome back!</h3>
       <p id="offlineText">You earned $0 while away.</p>
       <button class="modalBtn" id="offlineOk">Collect</button>
+    </div>
+  </div>
+
+  <!-- Tutorial modal -->
+  <div class="modalBackdrop" id="tutorialModal">
+    <div class="modal">
+      <h3 id="tutorialTitle">Tutorial</h3>
+      <p id="tutorialBody">Welcome!</p>
+      <div class="row">
+        <button class="modalBtn secondary" id="tutorialSkip">Skip</button>
+        <button class="modalBtn" id="tutorialNext">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div class="modalBackdrop" id="settingsModal">
+    <div class="modal">
+      <h3>Settings</h3>
+
+      <div class="howto" style="margin-top:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div>
+            <div style="font-weight:1000;">Theme</div>
+            <div style="opacity:.85;font-size:13px;">Changes the color vibe instantly.</div>
+          </div>
+          <select id="themeSelect" style="padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:#fff;">
+            <option value="neon">Neon</option>
+            <option value="sunset">Sunset</option>
+            <option value="emerald">Emerald</option>
+            <option value="midnight">Midnight</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="howto" style="margin-top:10px;">
+        <div style="font-weight:1000;margin-bottom:6px;">Sound Volume</div>
+        <input id="volumeRange" type="range" min="0" max="100" value="60" style="width:100%;">
+        <div style="display:flex;justify-content:space-between;opacity:.85;font-size:12px;margin-top:6px;">
+          <span>Off</span><span id="volumeLabel">60%</span><span>Max</span>
+        </div>
+      </div>
+
+      <div class="howto" style="margin-top:10px;">
+        <div style="font-weight:1000;margin-bottom:8px;">Quick Actions</div>
+        <div class="row">
+          <button class="modalBtn secondary" id="clearCacheBtn">Clear Cache</button>
+          <button class="modalBtn secondary" id="resetTutorialBtn">Reset Tutorial</button>
+        </div>
+        <div style="opacity:.85;font-size:12px;margin-top:8px;line-height:1.4;">
+          “Clear Cache” refreshes offline files (helpful when updates don’t appear).
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <button class="modalBtn secondary" id="settingsClose">Close</button>
+        <button class="modalBtn" id="settingsSave">Save</button>
+      </div>
     </div>
   </div>
 
