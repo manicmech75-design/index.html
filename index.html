@@ -39,10 +39,6 @@
       --glow: rgba(0,255,255,.22);
     }
 
-    body[data-theme="sunset"]{ --bg1:#3a1035; --bg2:#120612; --glow: rgba(255,128,0,.18); }
-    body[data-theme="emerald"]{ --bg1:#08362a; --bg2:#041411; --glow: rgba(0,220,140,.18); }
-    body[data-theme="midnight"]{ --bg1:#0f1b2a; --bg2:#060a12; --card: rgba(255,255,255,.05); --glow: rgba(120,160,255,.16); }
-
     body {
       margin: 0;
       min-height: 100vh;
@@ -114,6 +110,15 @@
     }
     .stat .label { opacity: .8; font-size: 12px; }
     .stat .value { font-size: 20px; margin-top: 6px; font-weight: 900; }
+
+    .howto{
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(0,0,0,.16);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .howto b{ font-weight: 950; }
 
     .tiles {
       margin-top: 12px;
@@ -211,7 +216,7 @@
   </style>
 </head>
 
-<body data-theme="neon">
+<body>
   <header>
     <h1>City Flip</h1>
     <div class="btnrow">
@@ -240,6 +245,23 @@
             <div class="label">Per Second</div>
             <div class="value" id="perSec">$0/s</div>
           </div>
+        </div>
+
+        <div class="howto">
+          <h2 style="margin:0 0 8px;">How to Play</h2>
+          <p style="margin:0 0 10px; opacity:.9;">
+            Tap tiles to earn cash, buy upgrades to earn faster, and build your city over time.
+          </p>
+          <ul style="margin:0; padding-left:18px; line-height:1.5; opacity:.92;">
+            <li><b>Tap a City Tile</b> to earn money.</li>
+            <li>Tiles can <b>level up</b> randomly as you tap.</li>
+            <li><b>Tap Boost</b> increases your base earnings per tap.</li>
+            <li><b>Passive Income</b> earns money every second.</li>
+            <li><b>City Development</b> boosts all tile bonuses.</li>
+            <li>The game <b>autosaves</b> frequently.</li>
+            <li>Use <b>Export</b> and <b>Import</b> to manage saves.</li>
+            <li><b>Offline earnings</b> can appear when you return.</li>
+          </ul>
         </div>
 
         <h2 style="margin:16px 0 10px;">City Tiles</h2>
