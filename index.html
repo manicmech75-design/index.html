@@ -115,27 +115,6 @@
     .stat .label { opacity: .8; font-size: 12px; }
     .stat .value { font-size: 20px; margin-top: 6px; font-weight: 900; }
 
-    .boostBar {
-      margin-top: 10px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: rgba(255,255,255,.10);
-      border: 1px solid rgba(255,255,255,.16);
-      display: none;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      font-weight: 900;
-    }
-    .boostBar .pill {
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: rgba(0,0,0,.22);
-      border: 1px solid rgba(255,255,255,.14);
-      font-size: 12px;
-      opacity: .95;
-    }
-
     .tiles {
       margin-top: 12px;
       display: grid;
@@ -194,12 +173,6 @@
       color: var(--btnText);
       background: var(--btn);
     }
-    .modalBtn.secondary{
-      color:#fff;
-      background: rgba(255,255,255,.12);
-      border: 1px solid rgba(255,255,255,.18);
-    }
-    .row{ display:flex; gap:10px; }
 
     .modalBackdrop {
       position: fixed; inset: 0;
@@ -219,8 +192,6 @@
       padding: 14px;
       box-shadow: 0 24px 80px rgba(0,0,0,.55);
     }
-    .modal h3 { margin: 0 0 8px; }
-    .modal p { margin: 0 0 12px; opacity: .9; }
 
     .toast {
       position: fixed;
@@ -269,11 +240,6 @@
             <div class="label">Per Second</div>
             <div class="value" id="perSec">$0/s</div>
           </div>
-        </div>
-
-        <div class="boostBar" id="boostBar">
-          <div>Boost Active</div>
-          <div class="pill" id="boostPill">2x • 00:00</div>
         </div>
 
         <h2 style="margin:16px 0 10px;">City Tiles</h2>
@@ -326,7 +292,7 @@
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js").catch(()=>{});
+        navigator.serviceWorker.register("./sw.js").catch(console.warn);
       });
     }
   </script>
