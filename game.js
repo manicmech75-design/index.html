@@ -1,8 +1,8 @@
-// Flip City — Builder Edition (All Updates)
-// - NO offline income (no catch-up, pauses when hidden)
-// - Activity Meter: "Collect Revenue" fills while visible; collect only when full
-// - Skyline reacts to buildings
-// - Manual Save/Load (optional)
+// Flip City — Builder Edition (Tiles Update)
+// - Tile map placement (8x6)
+// - NO offline income (pauses when hidden, no catch-up)
+// - Activity Meter: Collect only when full
+// - Manual Save/Load
 // Support: cityflipsupport@gmail.com
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -10,33 +10,38 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!root) return console.error("❌ Missing <div id='game'></div> in index.html");
 
   const SUPPORT_EMAIL = "cityflipsupport@gmail.com";
-  const SAVE_KEY = "flipcity_save_v1";
+  const SAVE_KEY = "flipcity_save_tiles_v1";
 
   const clamp01 = (n) => Math.max(0, Math.min(1, n));
   const fmtInt = (n) => Math.floor(n).toLocaleString();
 
   // -------------------- State --------------------
+  const MAP_W = 8;
+  const MAP_H = 6;
+
   const state = {
     money: 0,
     rps: 1,
 
-    // Buildings
-    buildings: {
-      homes: 0,     // +2 rps each
-      shops: 0,     // +5 rps each
-      offices: 0,   // +10 rps each
-    },
+    buildings: { homes: 0, shops: 0, offices: 0 },
 
-    // Activity meter (fills while visible)
+    // tilemap stores: "" | "home" | "shop" | "office"
+    map: Array.from({ length: MAP_W * MAP_H }, () => ""),
+
+    // selected build mode
+    selected: "home",
+
     meter: {
-      progress: 0,          // 0..1
-      fillSeconds: 12,      // time to fill while visible
-      reward: 15,           // money gained when collected
+      progress: 0,
+      fillSeconds: 12,
+      reward: 15,
     },
 
     running: true,
     lastTick: performance.now(),
   };
+
+  function idx(x, y) { return y * MAP_W + x; }
 
   function recalcRps() {
     state.rps =
@@ -44,6 +49,66 @@ document.addEventListener("DOMContentLoaded", () => {
       state.buildings.homes * 2 +
       state.buildings.shops * 5 +
       state.buildings.offices * 10;
+  }
+
+  // -------------------- Pricing --------------------
+  function costHomes()   { return 50  + state.buildings.homes   * 25; }
+  function costShops()   { return 150 + state.buildings.shops   * 60; }
+  function costOffices() { return 400 + state.buildings.offices * 140; }
+
+  function costFor(type) {
+    if (type === "home") return costHomes();
+    if (type === "shop") return costShops();
+    return costOffices();
+  }
+
+  function canAfford(type) {
+    return state.money >= costFor(type);
+  }
+
+  // -------------------- Save/Load --------------------
+  function saveGame() {
+    const data = {
+      money: state.money,
+      buildings: state.buildings,
+      map: state.map,
+      selected: state.selected,
+      meterReward: state.meter.reward,
+      meterFillSeconds: state.meter.fillSeconds,
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  }
+
+  function loadGame() {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    try {
+      const data = JSON.parse(raw);
+      state.money = Number(data.money || 0);
+      state.buildings = {
+        homes: Number(data.buildings?.homes || 0),
+        shops: Number(data.buildings?.shops || 0),
+        offices: Number(data.buildings?.offices || 0),
+      };
+      state.map = Array.isArray(data.map) && data.map.length === MAP_W * MAP_H
+        ? data.map.map(v => (v === "home" || v === "shop" || v === "office") ? v : "")
+        : Array.from({ length: MAP_W * MAP_H }, () => "");
+
+      state.selected = (data.selected === "home" || data.selected === "shop" || data.selected === "office")
+        ? data.selected
+        : "home";
+
+      state.meter.reward = Number(data.meterReward || 15);
+      state.meter.fillSeconds = Number(data.meterFillSeconds || 12);
+
+      // fairness: do NOT persist meter progress
+      state.meter.progress = 0;
+
+      recalcRps();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   // -------------------- Styles --------------------
@@ -57,15 +122,17 @@ document.addEventListener("DOMContentLoaded", () => {
         radial-gradient(900px 450px at 50% 0%, rgba(255,160,110,.55), transparent 60%),
         linear-gradient(to top, #0b1220 0%, #1a2b4c 40%, #ff915e 100%);
       color:#eaf0ff;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin:0;
     }
 
-    .wrap{ max-width:1020px; margin:0 auto; padding:20px; }
+    .wrap{ max-width:1100px; margin:0 auto; padding:20px; }
     .top{ display:flex; gap:12px; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; }
     h1{ font-size:24px; margin:0; letter-spacing:.3px; }
     .sub{ opacity:.85; font-size:13px; margin-top:4px; }
 
-    .grid{ display:grid; grid-template-columns: 1.15fr .85fr; gap:14px; margin-top:14px; }
-    @media (max-width: 920px){ .grid{ grid-template-columns:1fr; } }
+    .grid{ display:grid; grid-template-columns: 1.05fr .95fr; gap:14px; margin-top:14px; }
+    @media (max-width: 980px){ .grid{ grid-template-columns:1fr; } }
 
     .card{
       background: rgba(0,0,0,.35);
@@ -126,85 +193,65 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     .tiny{ opacity:.75; font-size:12px; }
 
-    /* Shop list */
-    .shop{
-      display:grid;
-      grid-template-columns: 1fr auto;
-      gap:10px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.08);
-      margin-top: 10px;
-    }
-    .shop .name{ font-weight:700; }
-    .shop .desc{ opacity:.8; font-size:12px; margin-top:3px; }
-    .shop .cost{ font-size:12px; opacity:.8; margin-top:4px; }
-
-    /* Skyline preview */
-    .sky{
-      position:relative;
-      height:160px;
-      border-radius: 12px;
-      overflow:hidden;
-      background:
-        linear-gradient(to top, rgba(11,18,32,1) 0%, rgba(26,43,76,1) 55%, rgba(255,145,94,1) 100%);
-      border: 1px solid rgba(255,255,255,.10);
-    }
-    .sun{
-      position:absolute; left:10%; top:14%;
-      width:68px; height:68px; border-radius:50%;
-      background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.9), rgba(255,220,170,.6) 35%, rgba(255,160,110,.15) 70%, transparent 72%);
-      opacity:.95;
-    }
-    .layer{
-      position:absolute; left:0; right:0; bottom:0;
-      background: linear-gradient(to top, rgba(0,0,0,.65), rgba(0,0,0,.12) 60%, transparent);
+    /* Tile map */
+    .mapTop{ display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+    .seg{
       display:flex;
-      align-items:flex-end;
-      gap:6px;
-      padding: 0 10px 10px;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
     }
-    .b{
-      width: 22px;
-      border-radius: 4px 4px 0 0;
-      background: rgba(0,0,0,.65);
-      border: 1px solid rgba(255,255,255,.06);
-      position:relative;
-      overflow:hidden;
+    .chip{
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.08);
+      color:#eaf0ff;
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      cursor:pointer;
+      user-select:none;
     }
-    .b:after{
-      content:"";
-      position:absolute; inset:0;
-      background:
-        repeating-linear-gradient(
-          to bottom,
-          transparent 0px,
-          transparent 6px,
-          rgba(255,210,140,.20) 6px,
-          rgba(255,210,140,.20) 7px
-        );
-      mix-blend-mode: screen;
-      opacity:.6;
-      transform: translateY(2px);
+    .chip.on{
+      background: rgba(120,200,255,.18);
+      border-color: rgba(120,200,255,.35);
     }
 
-    details{
+    .map{
       margin-top: 10px;
+      display:grid;
+      grid-template-columns: repeat(${MAP_W}, 1fr);
+      gap: 8px;
+    }
+    .tile{
+      aspect-ratio: 1 / 1;
       border-radius: 12px;
-      overflow:hidden;
       border: 1px solid rgba(255,255,255,.10);
       background: rgba(0,0,0,.25);
-    }
-    summary{
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.2);
       cursor:pointer;
-      padding: 10px 12px;
-      user-select:none;
-      font-weight:700;
-      list-style:none;
+      position:relative;
+      overflow:hidden;
     }
-    details > div{ padding: 10px 12px 12px; }
-    .helpLine{ opacity:.85; font-size:13px; line-height:1.35; }
+    .tile:hover{
+      border-color: rgba(255,255,255,.18);
+      background: rgba(255,255,255,.06);
+    }
+    .tile .label{
+      position:absolute;
+      left:8px; right:8px; bottom:8px;
+      font-size: 12px;
+      opacity:.9;
+      text-shadow: 0 2px 10px rgba(0,0,0,.55);
+      display:flex;
+      justify-content:space-between;
+      gap:6px;
+      align-items:center;
+    }
+    .tile .icon{ font-size: 18px; }
+
+    .tile.home  { background: linear-gradient(180deg, rgba(130,200,255,.14), rgba(0,0,0,.25)); }
+    .tile.shop  { background: linear-gradient(180deg, rgba(255,210,140,.14), rgba(0,0,0,.25)); }
+    .tile.office{ background: linear-gradient(180deg, rgba(200,160,255,.14), rgba(0,0,0,.25)); }
 
     footer{
       opacity:.72;
@@ -213,7 +260,6 @@ document.addEventListener("DOMContentLoaded", () => {
       margin: 18px 0 4px;
       line-height: 1.4;
     }
-
     a { color: #a9c7ff; }
   `;
   document.head.appendChild(style);
@@ -224,7 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="top">
         <div>
           <h1>🌆 Flip City</h1>
-          <div class="sub">Builder Edition · Money only earns while this tab is open & visible</div>
+          <div class="sub">Tiles Edition · Money only earns while this tab is open & visible</div>
         </div>
         <div class="pill" id="statusPill">🟢 Earning</div>
       </div>
@@ -240,7 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
           <div class="meterWrap">
             <div class="pill">⚡ Activity Meter</div>
-            <div class="bar" title="Fills while visible. Collect only when full."><i id="meterFill"></i></div>
+            <div class="bar"><i id="meterFill"></i></div>
             <button id="collectRevenueBtn" disabled>Collect Revenue +$<span id="meterReward">15</span></button>
             <div class="tiny" id="meterHint">Filling…</div>
           </div>
@@ -250,68 +296,48 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="btnRow">
             <button id="saveBtn">Save City</button>
             <button id="loadBtn">Load City</button>
-            <button id="resetBtn" title="Resets your save + current session.">Reset</button>
+            <button id="resetBtn">Reset</button>
           </div>
 
-          <details>
-            <summary>Help & Rules</summary>
-            <div class="helpLine">
-              • Earnings pause when you switch tabs (no catch-up).<br>
-              • Activity Meter fills only while visible; you can collect only when it’s full.<br>
-              • Save/Load stores your current city state (still no offline earnings).<br>
-              • Support: <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a>
+          <div style="height:12px"></div>
+
+          <div class="mapTop">
+            <div class="pill">🧱 Build Mode</div>
+            <div class="seg" id="buildSeg">
+              <div class="chip" data-type="home">🏠 Homes (+2/sec) · $<span id="costHome">50</span></div>
+              <div class="chip" data-type="shop">🏪 Shops (+5/sec) · $<span id="costShop">150</span></div>
+              <div class="chip" data-type="office">🏢 Offices (+10/sec) · $<span id="costOffice">400</span></div>
             </div>
-          </details>
-
-          <div style="height:6px"></div>
-
-          <div class="shop" id="buyHomes">
-            <div>
-              <div class="name">🏠 Add Homes (+2/sec)</div>
-              <div class="desc">Starter neighborhoods.</div>
-              <div class="cost">Cost: $<span id="costHomes">50</span></div>
-            </div>
-            <button id="btnHomes">Buy</button>
           </div>
 
-          <div class="shop" id="buyShops">
-            <div>
-              <div class="name">🏪 Add Shops (+5/sec)</div>
-              <div class="desc">Local commerce boosts revenue.</div>
-              <div class="cost">Cost: $<span id="costShops">150</span></div>
-            </div>
-            <button id="btnShops">Buy</button>
+          <div class="tiny" style="margin-top:8px;">
+            Click an empty tile to place the selected building.
           </div>
 
-          <div class="shop" id="buyOffices">
-            <div>
-              <div class="name">🏢 Add Offices (+10/sec)</div>
-              <div class="desc">Big productivity, bigger payout.</div>
-              <div class="cost">Cost: $<span id="costOffices">400</span></div>
-            </div>
-            <button id="btnOffices">Buy</button>
-          </div>
-
-          <div class="tiny" style="margin-top:10px;">
-            Tip: switching tabs pauses earnings (no catch-up).
-          </div>
+          <div class="map" id="map"></div>
         </div>
 
         <div class="card">
-          <div class="row" style="align-items:flex-end">
-            <div>
-              <div style="font-weight:700; margin-bottom:6px;">City Preview</div>
-              <div class="sub">Sunset skyline (reacts to your buildings)</div>
-            </div>
-            <div class="pill" id="cityCounts">🏠 0 · 🏪 0 · 🏢 0</div>
+          <div class="row">
+            <div style="font-weight:700;">Your City</div>
+            <div class="pill" id="counts">🏠 0 · 🏪 0 · 🏢 0</div>
           </div>
 
           <div style="height:10px"></div>
 
-          <div class="sky">
-            <div class="sun"></div>
-            <div class="layer" id="skyLayer"></div>
+          <div class="tiny">
+            No offline income. Switching tabs pauses earnings (no catch-up).
           </div>
+
+          <details style="margin-top:10px; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.25);">
+            <summary style="cursor:pointer; padding: 10px 12px; user-select:none; font-weight:700; list-style:none;">Help</summary>
+            <div style="padding: 10px 12px 12px; opacity:.85; font-size:13px; line-height:1.35;">
+              • Pick a building type, then click an empty tile.<br>
+              • Prices increase as you build more of that type.<br>
+              • Activity Meter fills only while visible; collect only when full.<br>
+              • Support: <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a>
+            </div>
+          </details>
         </div>
       </div>
 
@@ -334,136 +360,103 @@ document.addEventListener("DOMContentLoaded", () => {
   const loadBtn = document.getElementById("loadBtn");
   const resetBtn = document.getElementById("resetBtn");
 
-  const costHomesEl = document.getElementById("costHomes");
-  const costShopsEl = document.getElementById("costShops");
-  const costOfficesEl = document.getElementById("costOffices");
+  const buildSeg = document.getElementById("buildSeg");
+  const mapEl = document.getElementById("map");
+  const countsEl = document.getElementById("counts");
 
-  const btnHomes = document.getElementById("btnHomes");
-  const btnShops = document.getElementById("btnShops");
-  const btnOffices = document.getElementById("btnOffices");
+  const costHomeEl = document.getElementById("costHome");
+  const costShopEl = document.getElementById("costShop");
+  const costOfficeEl = document.getElementById("costOffice");
 
-  const cityCounts = document.getElementById("cityCounts");
-  const skyLayer = document.getElementById("skyLayer");
-
-  // -------------------- Pricing --------------------
-  function costHomes()   { return 50  + state.buildings.homes   * 25; }
-  function costShops()   { return 150 + state.buildings.shops   * 60; }
-  function costOffices() { return 400 + state.buildings.offices * 140; }
-
-  // -------------------- Save/Load --------------------
-  function saveGame() {
-    const data = {
-      money: state.money,
-      buildings: state.buildings,
-      meterReward: state.meter.reward,
-      meterFillSeconds: state.meter.fillSeconds,
-    };
-    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  // -------------------- Map Render --------------------
+  function tileIcon(type) {
+    if (type === "home") return "🏠";
+    if (type === "shop") return "🏪";
+    if (type === "office") return "🏢";
+    return "";
+  }
+  function tileName(type) {
+    if (type === "home") return "Homes";
+    if (type === "shop") return "Shops";
+    if (type === "office") return "Offices";
+    return "";
   }
 
-  function loadGame() {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return false;
-    try {
-      const data = JSON.parse(raw);
-      if (!data || typeof data !== "object") return false;
+  function renderChips() {
+    [...buildSeg.querySelectorAll(".chip")].forEach(ch => {
+      ch.classList.toggle("on", ch.dataset.type === state.selected);
+    });
+  }
 
-      state.money = Number(data.money || 0);
-      state.buildings = {
-        homes: Number(data.buildings?.homes || 0),
-        shops: Number(data.buildings?.shops || 0),
-        offices: Number(data.buildings?.offices || 0),
-      };
-      state.meter.reward = Number(data.meterReward || 15);
-      state.meter.fillSeconds = Number(data.meterFillSeconds || 12);
+  function renderMap() {
+    mapEl.innerHTML = "";
+    for (let y = 0; y < MAP_H; y++) {
+      for (let x = 0; x < MAP_W; x++) {
+        const t = state.map[idx(x, y)];
+        const div = document.createElement("div");
+        div.className = "tile" + (t ? ` ${t}` : "");
+        div.dataset.x = String(x);
+        div.dataset.y = String(y);
 
-      // IMPORTANT: do NOT load meter progress; keep it fair and online-only
-      state.meter.progress = 0;
+        const label = document.createElement("div");
+        label.className = "label";
 
-      recalcRps();
-      return true;
-    } catch {
-      return false;
+        const left = document.createElement("span");
+        left.className = "icon";
+        left.textContent = t ? tileIcon(t) : "⬚";
+
+        const right = document.createElement("span");
+        right.textContent = t ? tileName(t) : "Empty";
+
+        label.appendChild(left);
+        label.appendChild(right);
+        div.appendChild(label);
+
+        mapEl.appendChild(div);
+      }
     }
+  }
+
+  function renderCounts() {
+    countsEl.textContent = `🏠 ${state.buildings.homes} · 🏪 ${state.buildings.shops} · 🏢 ${state.buildings.offices}`;
   }
 
   // -------------------- Rendering --------------------
-  function renderSkyline() {
-    const total =
-      state.buildings.homes +
-      state.buildings.shops +
-      state.buildings.offices;
-
-    cityCounts.textContent = `🏠 ${state.buildings.homes} · 🏪 ${state.buildings.shops} · 🏢 ${state.buildings.offices}`;
-
-    // Create a simple skyline based on counts
-    skyLayer.innerHTML = "";
-
-    const makeBuildings = (count, minH, maxH, width) => {
-      for (let i = 0; i < count; i++) {
-        const d = document.createElement("div");
-        d.className = "b";
-        const h = minH + Math.random() * (maxH - minH);
-        d.style.height = `${h}px`;
-        d.style.width = `${width}px`;
-        d.style.opacity = `${0.55 + Math.random() * 0.25}`;
-        skyLayer.appendChild(d);
-      }
-    };
-
-    // If nothing built yet, show a few starter silhouettes
-    if (total === 0) {
-      makeBuildings(12, 35, 90, 20);
-      return;
-    }
-
-    // More homes = shorter buildings
-    makeBuildings(Math.max(8, state.buildings.homes * 4), 30, 85, 18);
-
-    // Shops = medium
-    makeBuildings(Math.max(4, state.buildings.shops * 3), 55, 120, 22);
-
-    // Offices = tall
-    makeBuildings(Math.max(2, state.buildings.offices * 2), 90, 150, 24);
-  }
-
   function render() {
     moneyEl.textContent = fmtInt(state.money);
     rpsEl.textContent = fmtInt(state.rps);
 
-    // Meter
+    // meter
     meterRewardEl.textContent = fmtInt(state.meter.reward);
     meterFillEl.style.width = `${Math.floor(state.meter.progress * 100)}%`;
     const full = state.meter.progress >= 1;
     collectRevenueBtn.disabled = !full;
-
     meterHintEl.textContent = full ? "Ready!" : "Filling…";
 
-    // Prices + enable/disable buy buttons
-    const ch = costHomes(), cs = costShops(), co = costOffices();
-    costHomesEl.textContent = fmtInt(ch);
-    costShopsEl.textContent = fmtInt(cs);
-    costOfficesEl.textContent = fmtInt(co);
+    // costs in chips
+    costHomeEl.textContent = fmtInt(costHomes());
+    costShopEl.textContent = fmtInt(costShops());
+    costOfficeEl.textContent = fmtInt(costOffices());
 
-    btnHomes.disabled = state.money < ch;
-    btnShops.disabled = state.money < cs;
-    btnOffices.disabled = state.money < co;
+    // gray out chips if can't afford (visual only)
+    [...buildSeg.querySelectorAll(".chip")].forEach(ch => {
+      const t = ch.dataset.type;
+      ch.style.opacity = canAfford(t) ? "1" : "0.6";
+    });
+
+    renderCounts();
+    renderChips();
   }
 
   // -------------------- NO OFFLINE / NO HIDDEN TAB EARNINGS --------------------
   function setRunning(isRunning) {
     state.running = isRunning;
-
-    // Reset clock so there is NO catch-up when returning
-    state.lastTick = performance.now();
-
+    state.lastTick = performance.now(); // prevent catch-up
     statusPill.textContent = isRunning ? "🟢 Earning" : "⏸️ Paused";
     statusPill.style.opacity = isRunning ? "0.95" : "0.75";
   }
 
-  document.addEventListener("visibilitychange", () => {
-    setRunning(!document.hidden);
-  });
+  document.addEventListener("visibilitychange", () => setRunning(!document.hidden));
   window.addEventListener("blur", () => setRunning(false));
   window.addEventListener("focus", () => setRunning(!document.hidden));
 
@@ -472,55 +465,58 @@ document.addEventListener("DOMContentLoaded", () => {
       const delta = (now - state.lastTick) / 1000;
       state.lastTick = now;
 
-      // Earn while visible
       state.money += state.rps * delta;
-
-      // Fill meter while visible (no catch-up)
       state.meter.progress = clamp01(state.meter.progress + (delta / state.meter.fillSeconds));
 
       render();
     } else {
-      // Keep lastTick fresh without accumulating
       state.lastTick = now;
     }
     requestAnimationFrame(tick);
   }
 
   // -------------------- Actions --------------------
+  buildSeg.addEventListener("click", (e) => {
+    const chip = e.target.closest(".chip");
+    if (!chip) return;
+    const t = chip.dataset.type;
+    if (t === "home" || t === "shop" || t === "office") {
+      state.selected = t;
+      render();
+    }
+  });
+
+  mapEl.addEventListener("click", (e) => {
+    const tile = e.target.closest(".tile");
+    if (!tile) return;
+    const x = Number(tile.dataset.x);
+    const y = Number(tile.dataset.y);
+    const i = idx(x, y);
+
+    if (state.map[i]) return; // already occupied
+
+    const type = state.selected;
+    const cost = costFor(type);
+    if (state.money < cost) return;
+
+    // Pay + place
+    state.money -= cost;
+    state.map[i] = type;
+
+    // Update counts
+    if (type === "home") state.buildings.homes += 1;
+    if (type === "shop") state.buildings.shops += 1;
+    if (type === "office") state.buildings.offices += 1;
+
+    recalcRps();
+    renderMap();
+    render();
+  });
+
   collectRevenueBtn.addEventListener("click", () => {
     if (state.meter.progress < 1) return;
     state.money += state.meter.reward;
     state.meter.progress = 0;
-    render();
-  });
-
-  btnHomes.addEventListener("click", () => {
-    const cost = costHomes();
-    if (state.money < cost) return;
-    state.money -= cost;
-    state.buildings.homes += 1;
-    recalcRps();
-    renderSkyline();
-    render();
-  });
-
-  btnShops.addEventListener("click", () => {
-    const cost = costShops();
-    if (state.money < cost) return;
-    state.money -= cost;
-    state.buildings.shops += 1;
-    recalcRps();
-    renderSkyline();
-    render();
-  });
-
-  btnOffices.addEventListener("click", () => {
-    const cost = costOffices();
-    if (state.money < cost) return;
-    state.money -= cost;
-    state.buildings.offices += 1;
-    recalcRps();
-    renderSkyline();
     render();
   });
 
@@ -533,10 +529,10 @@ document.addEventListener("DOMContentLoaded", () => {
   loadBtn.addEventListener("click", () => {
     const ok = loadGame();
     if (ok) {
-      loadBtn.textContent = "Loaded ✅";
       recalcRps();
-      renderSkyline();
+      renderMap();
       render();
+      loadBtn.textContent = "Loaded ✅";
     } else {
       loadBtn.textContent = "No Save Found";
     }
@@ -547,22 +543,22 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.removeItem(SAVE_KEY);
     state.money = 0;
     state.buildings = { homes: 0, shops: 0, offices: 0 };
+    state.map = Array.from({ length: MAP_W * MAP_H }, () => "");
+    state.selected = "home";
     state.meter.progress = 0;
     state.meter.reward = 15;
     state.meter.fillSeconds = 12;
     recalcRps();
-    renderSkyline();
+    renderMap();
     render();
     resetBtn.textContent = "Reset ✅";
     setTimeout(() => (resetBtn.textContent = "Reset"), 900);
   });
 
   // -------------------- Boot --------------------
-  // Try auto-load once (optional). If you don't want auto-load, comment these 2 lines.
-  loadGame();
+  loadGame();           // optional auto-load
   recalcRps();
-
-  renderSkyline();
+  renderMap();
   render();
   setRunning(!document.hidden);
   requestAnimationFrame(tick);
