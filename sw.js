@@ -1,59 +1,48 @@
-const CACHE = "cityflip-v200";
+// service-worker.js
+/* City Flip Service Worker (GitHub Pages friendly: relative paths) */
+const CACHE_NAME = 'cityflip-cache-v3';
 const ASSETS = [
-  "./",
-  "./index.html",
-  "./styles.css",
-  "./game.js",
-  "./manifest.webmanifest",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  './',
+  './index.html',
+  './styles.css',
+  './game.js',
+  './manifest.webmanifest',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
 ];
 
-// Install: cache core
-self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+  );
   self.skipWaiting();
 });
 
-// Activate: clear old caches
-self.addEventListener("activate", (e) => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.map(k => (k !== CACHE ? caches.delete(k) : null)))
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.map((k) => (k === CACHE_NAME ? null : caches.delete(k))))
     )
   );
   self.clients.claim();
 });
 
-// Fetch: network-first for HTML, cache-first for others
-self.addEventListener("fetch", (e) => {
-  const req = e.request;
-  const url = new URL(req.url);
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
 
-  // Only handle same-origin
-  if (url.origin !== location.origin) return;
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      if (cached) return cached;
 
-  const isHTML = req.headers.get("accept")?.includes("text/html");
-
-  if (isHTML) {
-    e.respondWith(
-      fetch(req)
-        .then(res => {
-          const copy = res.clone();
-          caches.open(CACHE).then(c => c.put(req, copy));
-          return res;
-        })
-        .catch(() => caches.match(req))
-    );
-    return;
-  }
-
-  e.respondWith(
-    caches.match(req).then(cached => {
-      return cached || fetch(req).then(res => {
+      return fetch(req).then((res) => {
         const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(req, copy));
+        caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
         return res;
+      }).catch(() => {
+        // Offline fallback to app shell
+        if (req.mode === 'navigate') return caches.match('./index.html');
+        return cached;
       });
     })
   );
