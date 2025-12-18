@@ -1,62 +1,628 @@
-// sw.js — Flip City (update-safe)
-// - Caches only index.html shell
-// - NEVER caches game.js (so updates show instantly)
+// Flip City — Builder Edition (Playable v1)
+// - Nice UI, no external assets
+// - NO offline income (pauses when tab is hidden)
+// - Manual Save/Load
+// Support: cityflipsupport@gmail.com
 
-const CACHE = "flipcity-shell-v3";
-const SHELL = ["./", "./index.html"];
+document.addEventListener("DOMContentLoaded", () => {
+  const root = document.getElementById("game");
+  if (!root) return console.error("❌ Missing <div id='game'></div> in index.html");
 
-self.addEventListener("install", (event) => {
-  self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(SHELL)).catch(() => {})
-  );
-});
+  const SUPPORT_EMAIL = "cityflipsupport@gmail.com";
+  const SAVE_KEY = "flipcity_playable_v1";
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil((async () => {
-    const keys = await caches.keys();
-    await Promise.all(keys.map((k) => (k !== CACHE ? caches.delete(k) : null)));
-    await self.clients.claim();
-  })());
-});
+  // ---------- helpers ----------
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const fmt = (n) => Math.floor(n).toLocaleString();
+  const now = () => performance.now();
 
-self.addEventListener("fetch", (event) => {
-  const req = event.request;
-  const url = new URL(req.url);
+  // ---------- state ----------
+  const state = {
+    money: 25,
+    rps: 0.5, // revenue per second
+    built: {
+      homes: 0,
+      shops: 0,
+      offices: 0,
+    },
+    // for UI
+    toast: "",
+    toastUntil: 0,
+  };
 
-  if (url.origin !== self.location.origin) return;
+  // ---------- styling ----------
+  const style = document.createElement("style");
+  style.textContent = `
+    :root{
+      --bg0:#070b14;
+      --bg1:#0b1220;
+      --card: rgba(255,255,255,.06);
+      --card2: rgba(255,255,255,.09);
+      --line: rgba(255,255,255,.10);
+      --text: #eaf0ff;
+      --muted: rgba(234,240,255,.72);
+      --good: rgba(120,255,170,.95);
+      --bad: rgba(255,140,140,.95);
+      --accent: rgba(120,190,255,.95);
+      --shadow: 0 18px 60px rgba(0,0,0,.55);
+      --radius: 18px;
+    }
 
-  // Always network for game.js
-  if (url.pathname.endsWith("/game.js")) {
-    event.respondWith(fetch(req));
-    return;
+    /* Background scene */
+    .scene{
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(1200px 700px at 20% 15%, rgba(120,190,255,.22), transparent 55%),
+        radial-gradient(900px 650px at 80% 10%, rgba(255,120,200,.12), transparent 52%),
+        radial-gradient(900px 600px at 50% 0%, rgba(130,255,200,.10), transparent 55%),
+        linear-gradient(180deg, var(--bg1) 0%, var(--bg0) 70%, #05070f 100%);
+    }
+    .stars::before{
+      content:"";
+      position:absolute; inset:-50%;
+      background-image:
+        radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,.55) 60%, transparent 61%),
+        radial-gradient(1px 1px at 25% 70%, rgba(255,255,255,.40) 60%, transparent 61%),
+        radial-gradient(1px 1px at 40% 35%, rgba(255,255,255,.45) 60%, transparent 61%),
+        radial-gradient(1px 1px at 60% 25%, rgba(255,255,255,.35) 60%, transparent 61%),
+        radial-gradient(1px 1px at 75% 65%, rgba(255,255,255,.38) 60%, transparent 61%),
+        radial-gradient(1px 1px at 90% 30%, rgba(255,255,255,.30) 60%, transparent 61%);
+      background-size: 420px 260px;
+      opacity: .7;
+      filter: blur(.2px);
+      transform: translateZ(0);
+    }
+    .haze{
+      position:absolute; inset:0;
+      background:
+        radial-gradient(1000px 520px at 50% 30%, rgba(255,255,255,.08), transparent 60%),
+        radial-gradient(900px 600px at 30% 50%, rgba(120,190,255,.10), transparent 65%),
+        radial-gradient(900px 600px at 70% 55%, rgba(255,120,200,.06), transparent 65%);
+      mix-blend-mode: screen;
+      opacity: .8;
+    }
+
+    /* Skyline */
+    .skyline{
+      position:absolute; left:0; right:0; bottom:0;
+      height: 34vh;
+      background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.65) 85%, rgba(0,0,0,.8) 100%);
+    }
+    .buildings{
+      position:absolute; left:-2vw; right:-2vw; bottom:-2vh;
+      height: 32vh;
+      filter: drop-shadow(0 25px 40px rgba(0,0,0,.6));
+      opacity: .95;
+    }
+    .buildings::before{
+      content:"";
+      position:absolute; inset:0;
+      background:
+        linear-gradient(to top, rgba(0,0,0,.9), rgba(0,0,0,.2)),
+        repeating-linear-gradient(
+          to right,
+          rgba(255,255,255,.0) 0px,
+          rgba(255,255,255,.0) 18px,
+          rgba(255,255,255,.06) 19px,
+          rgba(255,255,255,.0) 20px
+        );
+      mask:
+        linear-gradient(to top, transparent 0%, rgba(0,0,0,1) 20%);
+      border-top: 1px solid rgba(255,255,255,.06);
+    }
+    .sil{
+      position:absolute; bottom:0;
+      width: 12vw; min-width: 90px; max-width: 170px;
+      background: linear-gradient(180deg, rgba(20,25,40,.9), rgba(5,7,15,.98));
+      border: 1px solid rgba(255,255,255,.05);
+      border-bottom: none;
+      border-radius: 10px 10px 0 0;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+    }
+    .sil::after{
+      content:"";
+      position:absolute; inset: 12% 10% 8% 10%;
+      background:
+        repeating-linear-gradient(
+          to right,
+          rgba(120,190,255,.0) 0px,
+          rgba(120,190,255,.0) 12px,
+          rgba(120,190,255,.20) 13px,
+          rgba(120,190,255,.0) 14px
+        ),
+        repeating-linear-gradient(
+          to top,
+          rgba(255,255,255,.0) 0px,
+          rgba(255,255,255,.0) 10px,
+          rgba(255,240,200,.16) 11px,
+          rgba(255,255,255,.0) 12px
+        );
+      opacity: .55;
+      border-radius: 8px 8px 0 0;
+      mask: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,.8) 60%, transparent 100%);
+    }
+
+    /* App layout */
+    .wrap{
+      position: relative;
+      z-index: 1;
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 22px 18px 120px;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .title h1{
+      margin:0;
+      font-size: 22px;
+      letter-spacing: .2px;
+    }
+    .title .sub{
+      margin-top: 4px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .pillRow{
+      display:flex;
+      gap:10px;
+      flex-wrap: wrap;
+      align-items:center;
+      justify-content: flex-end;
+    }
+    .pill{
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      color: rgba(234,240,255,.88);
+      backdrop-filter: blur(10px);
+    }
+    .pill strong{ color: var(--text); font-weight: 700; }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.3fr .7fr;
+      gap: 14px;
+    }
+    @media (max-width: 900px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+    }
+    .cardHead{
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+    }
+    .cardHead h2{
+      margin:0;
+      font-size: 14px;
+      letter-spacing: .2px;
+      color: rgba(234,240,255,.92);
+    }
+    .cardBody{ padding: 14px 16px 16px; }
+    .muted{ color: var(--muted); }
+
+    .bigMoney{
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -.6px;
+      margin: 6px 0 4px;
+    }
+    .rate{
+      font-size: 13px;
+      color: rgba(234,240,255,.78);
+    }
+
+    .btnRow{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    button{
+      appearance:none;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.08);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 14px;
+      font-weight: 650;
+      cursor:pointer;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease;
+      user-select:none;
+    }
+    button:hover{ background: rgba(255,255,255,.11); border-color: rgba(255,255,255,.18); }
+    button:active{ transform: translateY(1px); }
+    button[disabled]{
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    .primary{
+      background: rgba(120,190,255,.18);
+      border-color: rgba(120,190,255,.35);
+    }
+    .primary:hover{
+      background: rgba(120,190,255,.22);
+      border-color: rgba(120,190,255,.45);
+    }
+
+    .list{
+      display:grid;
+      gap: 10px;
+    }
+    .item{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(0,0,0,.18);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .itemLeft{
+      display:flex;
+      flex-direction:column;
+      gap: 3px;
+    }
+    .itemName{
+      font-weight: 750;
+      letter-spacing: .2px;
+    }
+    .itemMeta{
+      font-size: 12.5px;
+      color: rgba(234,240,255,.72);
+    }
+    .itemRight{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      gap: 6px;
+      min-width: 170px;
+    }
+    .cost{
+      font-size: 12.5px;
+      color: rgba(234,240,255,.78);
+    }
+    .owned{
+      font-size: 12.5px;
+      color: rgba(234,240,255,.70);
+    }
+
+    .toast{
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,.55);
+      border: 1px solid rgba(255,255,255,.14);
+      color: rgba(234,240,255,.92);
+      padding: 10px 14px;
+      border-radius: 999px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 16px 60px rgba(0,0,0,.6);
+      z-index: 3;
+      font-size: 13px;
+      max-width: min(720px, calc(100vw - 28px));
+      text-align: center;
+      display:none;
+    }
+
+    .footer{
+      margin-top: 14px;
+      font-size: 12.5px;
+      color: rgba(234,240,255,.62);
+      display:flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .footer a{ color: rgba(120,190,255,.92); text-decoration: none; }
+    .footer a:hover{ text-decoration: underline; }
+    .warn{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(255,200,120,.10);
+      border: 1px solid rgba(255,200,120,.22);
+      color: rgba(255,235,210,.92);
+      font-size: 13px;
+    }
+  `;
+  document.head.appendChild(style);
+
+  // ---------- UI ----------
+  root.innerHTML = `
+    <div class="scene stars">
+      <div class="haze"></div>
+      <div class="skyline">
+        <div class="buildings">
+          <div class="sil" style="left:6vw; height:22vh;"></div>
+          <div class="sil" style="left:18vw; height:28vh;"></div>
+          <div class="sil" style="left:30vw; height:18vh;"></div>
+          <div class="sil" style="left:42vw; height:30vh;"></div>
+          <div class="sil" style="left:56vw; height:20vh;"></div>
+          <div class="sil" style="left:68vw; height:27vh;"></div>
+          <div class="sil" style="left:80vw; height:19vh;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <div class="topbar">
+        <div class="title">
+          <h1>Flip City — Builder Edition</h1>
+          <div class="sub">A playable core loop. Money only earns while this tab is open.</div>
+        </div>
+
+        <div class="pillRow">
+          <div class="pill">Money: <strong id="moneyPill">$0</strong></div>
+          <div class="pill">Revenue: <strong id="rpsPill">0/s</strong></div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="cardHead">
+            <h2>City Treasury</h2>
+            <div id="pausedBadge" class="warn" style="display:none;">⏸ Paused (tab hidden)</div>
+          </div>
+          <div class="cardBody">
+            <div class="bigMoney" id="moneyBig">$0</div>
+            <div class="rate" id="rateLine">Earning 0 per second</div>
+
+            <div class="btnRow">
+              <button class="primary" id="clickEarnBtn">Collect $1</button>
+              <button id="saveBtn">Manual Save</button>
+              <button id="loadBtn">Manual Load</button>
+              <button id="resetBtn" title="Resets your local save">Reset</button>
+            </div>
+
+            <div class="footer">
+              <div>Support: <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></div>
+              <div class="muted">Save key: <code>${SAVE_KEY}</code></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="cardHead">
+            <h2>Build</h2>
+            <div class="muted" style="font-size:12.5px;">Buy buildings to raise revenue.</div>
+          </div>
+          <div class="cardBody">
+            <div class="list" id="buildList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  `;
+
+  const elMoneyPill = document.getElementById("moneyPill");
+  const elRpsPill = document.getElementById("rpsPill");
+  const elMoneyBig = document.getElementById("moneyBig");
+  const elRateLine = document.getElementById("rateLine");
+  const elBuildList = document.getElementById("buildList");
+  const elToast = document.getElementById("toast");
+  const elPausedBadge = document.getElementById("pausedBadge");
+
+  // ---------- economy ----------
+  const buildings = [
+    {
+      key: "homes",
+      name: "Homes",
+      desc: "+0.8 / sec",
+      baseCost: 35,
+      addRps: 0.8,
+      costGrowth: 1.16
+    },
+    {
+      key: "shops",
+      name: "Shops",
+      desc: "+3.5 / sec",
+      baseCost: 160,
+      addRps: 3.5,
+      costGrowth: 1.18
+    },
+    {
+      key: "offices",
+      name: "Offices",
+      desc: "+12 / sec",
+      baseCost: 650,
+      addRps: 12,
+      costGrowth: 1.20
+    }
+  ];
+
+  function costFor(b) {
+    const owned = state.built[b.key] || 0;
+    return Math.floor(b.baseCost * Math.pow(b.costGrowth, owned));
   }
 
-  const isHTML =
-    req.mode === "navigate" ||
-    (req.headers.get("accept") || "").includes("text/html");
-
-  if (isHTML) {
-    event.respondWith((async () => {
-      try {
-        const fresh = await fetch(req);
-        const cache = await caches.open(CACHE);
-        cache.put("./index.html", fresh.clone());
-        return fresh;
-      } catch {
-        return (await caches.match("./index.html")) || Response.error();
-      }
-    })());
-    return;
+  function recomputeRps() {
+    let rps = 0.0;
+    for (const b of buildings) {
+      rps += (state.built[b.key] || 0) * b.addRps;
+    }
+    // tiny baseline so early game doesn’t feel dead
+    rps += 0.5;
+    state.rps = rps;
   }
 
-  // Cache-first for everything else
-  event.respondWith((async () => {
-    const cached = await caches.match(req);
-    if (cached) return cached;
-    const fresh = await fetch(req);
-    const cache = await caches.open(CACHE);
-    cache.put(req, fresh.clone());
-    return fresh;
-  })());
+  // ---------- save/load ----------
+  function save() {
+    const payload = {
+      v: 1,
+      money: state.money,
+      built: state.built
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+    toast("✅ Saved");
+  }
+
+  function load() {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return toast("No save found.");
+    try {
+      const data = JSON.parse(raw);
+      if (!data || data.v !== 1) return toast("Save format mismatch.");
+      state.money = Number(data.money) || 0;
+      state.built = Object.assign({ homes: 0, shops: 0, offices: 0 }, data.built || {});
+      recomputeRps();
+      toast("✅ Loaded");
+      render();
+    } catch {
+      toast("Save corrupted.");
+    }
+  }
+
+  function reset() {
+    localStorage.removeItem(SAVE_KEY);
+    state.money = 25;
+    state.built = { homes: 0, shops: 0, offices: 0 };
+    recomputeRps();
+    toast("Reset complete.");
+    render();
+  }
+
+  // ---------- toast ----------
+  function toast(msg) {
+    state.toast = msg;
+    state.toastUntil = now() + 1600;
+    elToast.textContent = msg;
+    elToast.style.display = "block";
+  }
+
+  // ---------- render ----------
+  function renderBuildList() {
+    elBuildList.innerHTML = "";
+    for (const b of buildings) {
+      const cost = costFor(b);
+      const owned = state.built[b.key] || 0;
+      const canBuy = state.money >= cost;
+
+      const row = document.createElement("div");
+      row.className = "item";
+      row.innerHTML = `
+        <div class="itemLeft">
+          <div class="itemName">${b.name}</div>
+          <div class="itemMeta">${b.desc}</div>
+        </div>
+        <div class="itemRight">
+          <div class="cost">Cost: <strong>$${fmt(cost)}</strong></div>
+          <div class="owned">Owned: <strong>${fmt(owned)}</strong></div>
+          <button ${canBuy ? "" : "disabled"} data-buy="${b.key}">Build</button>
+        </div>
+      `;
+      elBuildList.appendChild(row);
+    }
+
+    // wire buttons
+    elBuildList.querySelectorAll("button[data-buy]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const key = btn.getAttribute("data-buy");
+        const b = buildings.find(x => x.key === key);
+        if (!b) return;
+
+        const cost = costFor(b);
+        if (state.money < cost) return toast("Not enough money.");
+
+        state.money -= cost;
+        state.built[key] = (state.built[key] || 0) + 1;
+        recomputeRps();
+        toast(`🏗 Built ${b.name}`);
+        render();
+      });
+    });
+  }
+
+  function render() {
+    elMoneyPill.textContent = `$${fmt(state.money)}`;
+    elMoneyBig.textContent = `$${fmt(state.money)}`;
+    elRpsPill.textContent = `${state.rps.toFixed(1)}/s`;
+    elRateLine.textContent = `Earning ${state.rps.toFixed(1)} per second (only while this tab is visible)`;
+    renderBuildList();
+  }
+
+  // ---------- gameplay loop (NO OFFLINE INCOME) ----------
+  let lastT = now();
+  let visible = !document.hidden;
+
+  function tick() {
+    const t = now();
+    const dt = (t - lastT) / 1000;
+    lastT = t;
+
+    // Only earn if visible (prevents offline income)
+    if (visible) {
+      // clamp dt so tab switching doesn’t “burst” income
+      const safeDt = clamp(dt, 0, 0.25);
+      state.money += state.rps * safeDt;
+    }
+
+    // toast timeout
+    if (state.toastUntil && t > state.toastUntil) {
+      elToast.style.display = "none";
+      state.toastUntil = 0;
+    }
+
+    // update UI frequently but lightweight
+    elMoneyPill.textContent = `$${fmt(state.money)}`;
+    elMoneyBig.textContent = `$${fmt(state.money)}`;
+
+    requestAnimationFrame(tick);
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    visible = !document.hidden;
+    elPausedBadge.style.display = visible ? "none" : "inline-flex";
+    // reset lastT so coming back doesn't accumulate dt
+    lastT = now();
+  });
+
+  // ---------- buttons ----------
+  document.getElementById("clickEarnBtn").addEventListener("click", () => {
+    state.money += 1;
+    toast("+$1");
+    render();
+  });
+  document.getElementById("saveBtn").addEventListener("click", save);
+  document.getElementById("loadBtn").addEventListener("click", load);
+  document.getElementById("resetBtn").addEventListener("click", reset);
+
+  // ---------- boot ----------
+  recomputeRps();
+  load();        // try auto-load (safe; only loads if present)
+  render();
+  requestAnimationFrame(tick);
 });
